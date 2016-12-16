@@ -1,62 +1,109 @@
 package main
 
 import (
-	// "encoding/json"
-	"fmt"
+	"config"
+	// "fmt"
 	log "github.com/Sirupsen/logrus"
 	// "github.com/docker/docker/api/types/swarm"
 	"github.com/gin-gonic/gin"
 	"handler"
 	"net/http"
+	"os"
 	"time"
 )
 
 func main() {
 	log.Info("Main process started.")
 	log.SetLevel(log.DebugLevel)
-	gin.SetMode(gin.ReleaseMode)
+	if os.Getenv("release") != "" {
+		gin.SetMode(gin.ReleaseMode)
+	}
 
-	// // just test
-	// endpoint := "127.0.0.1:2374"
-	// services, err := handler.ListServices(endpoint)
-	// if err == nil {
-	// 	for _, service := range services {
-	// 		log.Info(service.Spec.Name)
-	// 	}
-	// } else {
-	// 	log.Error(err)
-	// }
+	// load config
+	conf, err := config.LoadConfig()
+	if err != nil {
+		panic(err)
+	}
+
+	log.Debug("Swarmkit Endpoints: ", conf.Endpoints)
 
 	router := gin.Default()
+	router.GET("/", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"apis": router.Routes(),
+		})
+	})
 	router.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"ping": "pong",
 		})
 	})
+	router.GET("/pong", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"pong": "ping",
+		})
+	})
 
-	router.GET("/services/:endpoint", listService)
+	// list all services
+	router.GET("/services", listServices)
+
+	// service actions
+	serviceGroup := router.Group("/service")
+	{
+		serviceGroup.GET("/:serviceID", inspectAservice)
+		serviceGroup.GET("/:serviceID/status", getServiceStatus)
+	}
 
 	server := &http.Server{
-		Addr:           ":8001",
+		Addr:           ":8083",
 		Handler:        router,
 		ReadTimeout:    3600 * time.Second,
 		WriteTimeout:   3600 * time.Second,
 		MaxHeaderBytes: 1 << 20,
 	}
 	server.ListenAndServe()
-	fmt.Println("Hello world!")
+	log.Info("Exit 0")
 }
 
-func listService(c *gin.Context) {
-	endpoint := c.Param("endpoint")
-	services, err := handler.ListServices(endpoint)
+func listServices(c *gin.Context) {
+	for _, endpoint := range config.Conf.Endpoints {
+		services, err := handler.ListServices(endpoint)
+		if err == nil {
+			c.JSON(200, services)
+		} else {
+			log.Error(err)
+		}
+	}
+}
+
+func inspectAservice(c *gin.Context) {
+	serviceID := c.Param("serviceID")
+	service, err := handler.InspectService(serviceID)
 	if err == nil {
-		c.JSON(200, services)
+		if service.ID != "" {
+			c.JSON(200, service)
+		} else {
+			c.JSON(404, gin.H{
+				"error": "service not found",
+			})
+		}
 	} else {
 		log.Error(err)
 	}
 }
 
-func createService(c *gin.Context) error {
-	return nil
+func getServiceStatus(c *gin.Context) {
+	serviceID := c.Param("serviceID")
+	service, err := handler.InspectServiceTasks(serviceID)
+	if err == nil {
+		if service.ID != "" {
+			c.JSON(200, service)
+		} else {
+			c.JSON(404, gin.H{
+				"error": "service not found",
+			})
+		}
+	} else {
+		log.Error(err)
+	}
 }

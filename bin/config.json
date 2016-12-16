@@ -1,0 +1,12 @@
+{
+	"Endpoints":[
+		"127.0.0.1:2374"
+	],
+	"MongoDB":{
+		"Host": "127.0.0.1",
+		"Port": "27017",
+		"User": "muser",
+		"Pass": "mpass"
+	},
+	"LogLevel": "debug"
+}

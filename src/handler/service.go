@@ -37,7 +37,7 @@ func ListServices(endpoint string) ([]string, error) {
 
 func InspectService(serviceID string) (swarm.Service, error) {
 	log.Info(fmt.Sprintf("Get Service [ %s ]", serviceID))
-	for _, endpoint := range config.Conf.Endpoints {
+	for _, endpoint := range config.C.Endpoints {
 		host := "tcp://" + endpoint
 		version := "v1.24"
 		UA := map[string]string{"User-Agent": "engine-api-cli-1.0"}
@@ -59,7 +59,7 @@ func InspectService(serviceID string) (swarm.Service, error) {
 }
 
 func InspectServiceTasks(serviceID string) (swarm.Task, error) {
-	for _, endpoint := range config.Conf.Endpoints {
+	for _, endpoint := range config.C.Endpoints {
 		host := "tcp://" + endpoint
 		version := "v1.24"
 		UA := map[string]string{"User-Agent": "engine-api-cli-1.0"}

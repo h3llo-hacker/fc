@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"time"
+	"utils"
 )
 
 func main() {
@@ -20,10 +21,10 @@ func main() {
 	}
 
 	// load config
-	conf, err := config.LoadConfig()
-	if err != nil {
-		panic(err)
-	}
+	conf := config.LoadConfig()
+
+	// test utils
+	utils.TestDB()
 
 	log.Debug("Swarmkit Endpoints: ", conf.Endpoints)
 
@@ -66,7 +67,7 @@ func main() {
 }
 
 func listServices(c *gin.Context) {
-	for _, endpoint := range config.Conf.Endpoints {
+	for _, endpoint := range config.C.Endpoints {
 		services, err := handler.ListServices(endpoint)
 		if err == nil {
 			c.JSON(200, services)

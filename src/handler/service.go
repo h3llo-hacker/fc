@@ -92,3 +92,26 @@ func InspectServiceTasks(serviceID string) (swarm.Task, error) {
 	}
 	return swarm.Task{}, nil
 }
+
+func CreateService(endpoint, serviceName, serviceImage string) error {
+	host := "tcp://" + endpoint
+	version := "v1.24"
+	UA := map[string]string{"User-Agent": "engine-api-cli-1.0"}
+	cli, err := client.NewClient(host, version, nil, UA)
+	if err != nil {
+		log.Error(err)
+	}
+	// Service Info
+	service := &swarm.ServiceSpec{}
+	service.Name = serviceName
+	service.TaskTemplate.ContainerSpec.Image = serviceImage
+	// Create Service
+	ctx := context.Background()
+	response, err := cli.ServiceCreate(ctx, *service, types.ServiceCreateOptions{})
+	if err == nil {
+		log.Info(response)
+	} else {
+		return err
+	}
+	return nil
+}

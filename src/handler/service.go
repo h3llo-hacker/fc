@@ -13,12 +13,10 @@ import (
 
 func ListServices(endpoint string) ([]string, error) {
 	log.Info(fmt.Sprintf("Get [ %s ] Services", endpoint))
-	host := "tcp://" + endpoint
-	version := "v1.24"
-	UA := map[string]string{"User-Agent": "engine-api-cli-1.0"}
-	cli, err := client.NewClient(host, version, nil, UA)
+	cli, err := DockerCli(endpoint)
 	if err != nil {
 		log.Error(err)
+		return []string{}, err
 	}
 	ctx := context.Background()
 
@@ -38,12 +36,10 @@ func ListServices(endpoint string) ([]string, error) {
 func InspectService(serviceID string) (swarm.Service, error) {
 	log.Info(fmt.Sprintf("Get Service [ %s ]", serviceID))
 	for _, endpoint := range config.Conf.Endpoints {
-		host := "tcp://" + endpoint
-		version := "v1.24"
-		UA := map[string]string{"User-Agent": "engine-api-cli-1.0"}
-		cli, err := client.NewClient(host, version, nil, UA)
+		cli, err := DockerCli(endpoint)
 		if err != nil {
 			log.Error(err)
+			return swarm.Service{}, err
 		}
 		ctx := context.Background()
 
@@ -60,12 +56,10 @@ func InspectService(serviceID string) (swarm.Service, error) {
 
 func InspectServiceTasks(serviceID string) (swarm.Task, error) {
 	for _, endpoint := range config.Conf.Endpoints {
-		host := "tcp://" + endpoint
-		version := "v1.24"
-		UA := map[string]string{"User-Agent": "engine-api-cli-1.0"}
-		cli, err := client.NewClient(host, version, nil, UA)
+		cli, err := DockerCli(endpoint)
 		if err != nil {
 			log.Error(err)
+			return swarm.Task{}, err
 		}
 		ctx := context.Background()
 		// Get Service
@@ -94,12 +88,10 @@ func InspectServiceTasks(serviceID string) (swarm.Task, error) {
 }
 
 func CreateService(endpoint, serviceName, serviceImage string) error {
-	host := "tcp://" + endpoint
-	version := "v1.24"
-	UA := map[string]string{"User-Agent": "engine-api-cli-1.0"}
-	cli, err := client.NewClient(host, version, nil, UA)
+	cli, err := DockerCli(endpoint)
 	if err != nil {
 		log.Error(err)
+		return err
 	}
 	// Service Info
 	service := &swarm.ServiceSpec{}
@@ -114,4 +106,32 @@ func CreateService(endpoint, serviceName, serviceImage string) error {
 		return err
 	}
 	return nil
+}
+
+func RemoveService(endpoint, serviceID string) error {
+	cli, err := DockerCli(endpoint)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+
+	// Remove Service
+	ctx := context.Background()
+	err = cli.ServiceRemove(ctx, serviceID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func DockerCli(endpoint string) (*client.Client, error) {
+	host := "tcp://" + endpoint
+	version := "v1.24"
+	UA := map[string]string{"User-Agent": "engine-api-cli-1.0"}
+	cli, err := client.NewClient(host, version, nil, UA)
+	if err != nil {
+		log.Error(err)
+		return &client.Client{}, err
+	}
+	return cli, nil
 }

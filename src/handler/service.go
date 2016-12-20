@@ -34,8 +34,10 @@ func ListServices(endpoint string) ([]string, error) {
 }
 
 func InspectService(serviceID string) (swarm.Service, error) {
-	log.Info(fmt.Sprintf("Get Service [ %s ]", serviceID))
+	var S swarm.Service
+	var E error
 	for _, endpoint := range config.Conf.Endpoints {
+		log.Info(fmt.Sprintf("Get Service [ %s ]", serviceID))
 		cli, err := DockerCli(endpoint)
 		if err != nil {
 			log.Error(err)
@@ -44,18 +46,22 @@ func InspectService(serviceID string) (swarm.Service, error) {
 		ctx := context.Background()
 
 		// Get Service
-		// filters := filters.NewArgs()
-		// filters.Add("service", serviceID)
 		service, _, err := cli.ServiceInspectWithRaw(ctx, serviceID)
 		if err == nil {
-			return service, nil
+			S = service
+			E = nil
+			break
+		} else {
+			S = swarm.Service{}
+			E = err
 		}
 	}
-	return swarm.Service{}, nil
+	return S, E
 }
 
 func InspectServiceTasks(serviceID string) (swarm.Task, error) {
 	for _, endpoint := range config.Conf.Endpoints {
+		log.Info(endpoint)
 		cli, err := DockerCli(endpoint)
 		if err != nil {
 			log.Error(err)

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"testing"
 )
 
@@ -46,10 +47,10 @@ func TestHasService(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	serviceID := "nginx"
+	serviceID := "nginxxxx"
 	has := HasService(cli, serviceID)
 	if has == true {
-		t.Error("err")
+		t.Error(errors.New("service nginxxxx found?"))
 	}
 }
 

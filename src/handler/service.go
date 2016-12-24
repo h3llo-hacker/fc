@@ -2,6 +2,7 @@ package handler
 
 import (
 	"config"
+	"errors"
 	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"github.com/docker/docker/api/types"
@@ -17,10 +18,11 @@ func ListServices(endpoint string) ([]string, error) {
 	if err != nil {
 		log.Error(err)
 		return []string{}, err
+	} else {
+		defer cli.Close()
 	}
-	ctx := context.Background()
-
 	// Get Services
+	ctx := context.Background()
 	services, err := cli.ServiceList(ctx, types.ServiceListOptions{})
 	defer cli.Close()
 	if err == nil {
@@ -43,12 +45,13 @@ func InspectService(serviceID string) (swarm.Service, error) {
 		if err != nil {
 			log.Error(err)
 			return swarm.Service{}, err
+		} else {
+			defer cli.Close()
 		}
-		ctx := context.Background()
 
 		// Get Service
+		ctx := context.Background()
 		service, _, err := cli.ServiceInspectWithRaw(ctx, serviceID)
-		defer cli.Close()
 		if err == nil {
 			S = service
 			E = nil
@@ -69,8 +72,9 @@ func InspectServiceTasks(serviceID string) (swarm.Task, error) {
 			log.Error(err)
 			return swarm.Task{}, err
 		}
-		ctx := context.Background()
+
 		// Get Service
+		ctx := context.Background()
 		service, _, err := cli.ServiceInspectWithRaw(ctx, serviceID)
 		if err == nil {
 			filters := filters.NewArgs()
@@ -106,6 +110,13 @@ func CreateService(endpoint, serviceName, serviceImage string) error {
 	service := &swarm.ServiceSpec{}
 	service.Name = serviceName
 	service.TaskTemplate.ContainerSpec.Image = serviceImage
+
+	// Check service
+	if HasService(cli, serviceName) == true {
+		e := errors.New(fmt.Sprintf("Service [ %s ] Already Exists.", serviceName))
+		return e
+	}
+
 	// Create Service
 	ctx := context.Background()
 	response, err := cli.ServiceCreate(ctx, *service, types.ServiceCreateOptions{})
@@ -128,7 +139,8 @@ func RemoveService(endpoint, serviceID string) error {
 	// Remove Service
 	ctx := context.Background()
 	if HasService(cli, serviceID) == false {
-		return nil
+		e := errors.New(fmt.Sprintf("Service [ %s ] Not Found", serviceID))
+		return e
 	}
 	err = cli.ServiceRemove(ctx, serviceID)
 	defer cli.Close()

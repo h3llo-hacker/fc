@@ -22,6 +22,7 @@ func ListServices(endpoint string) ([]string, error) {
 
 	// Get Services
 	services, err := cli.ServiceList(ctx, types.ServiceListOptions{})
+	defer cli.Close()
 	if err == nil {
 		s := make([]string, 0)
 		for _, service := range services {
@@ -47,6 +48,7 @@ func InspectService(serviceID string) (swarm.Service, error) {
 
 		// Get Service
 		service, _, err := cli.ServiceInspectWithRaw(ctx, serviceID)
+		defer cli.Close()
 		if err == nil {
 			S = service
 			E = nil
@@ -87,6 +89,7 @@ func InspectServiceTasks(serviceID string) (swarm.Task, error) {
 					task = t
 				}
 			}
+			defer cli.Close()
 			return task, nil
 		}
 	}
@@ -106,6 +109,7 @@ func CreateService(endpoint, serviceName, serviceImage string) error {
 	// Create Service
 	ctx := context.Background()
 	response, err := cli.ServiceCreate(ctx, *service, types.ServiceCreateOptions{})
+	defer cli.Close()
 	if err == nil {
 		log.Info(response)
 	} else {
@@ -123,7 +127,11 @@ func RemoveService(endpoint, serviceID string) error {
 
 	// Remove Service
 	ctx := context.Background()
+	if HasService(cli, serviceID) == false {
+		return nil
+	}
 	err = cli.ServiceRemove(ctx, serviceID)
+	defer cli.Close()
 	if err != nil {
 		return err
 	}
@@ -140,4 +148,14 @@ func DockerCli(endpoint string) (*client.Client, error) {
 		return &client.Client{}, err
 	}
 	return cli, nil
+}
+
+func HasService(cli *client.Client, serviceID string) bool {
+	ctx := context.Background()
+	_, _, err := cli.ServiceInspectWithRaw(ctx, serviceID)
+	defer cli.Close()
+	if err != nil {
+		return false
+	}
+	return true
 }

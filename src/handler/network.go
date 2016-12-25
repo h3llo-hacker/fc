@@ -2,14 +2,14 @@ package handler
 
 import (
 	// "config"
-	// "errors"
+	"errors"
 	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"github.com/docker/docker/api/types"
 	// "github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/network"
 	// "github.com/docker/docker/api/types/swarm"
-	// "github.com/docker/docker/client"
+	"github.com/docker/docker/client"
 	"golang.org/x/net/context"
 )
 
@@ -48,6 +48,11 @@ func CreateNetwork(endpoint, networkID string) (string, error) {
 		defer cli.Close()
 	}
 
+	// Check
+	if HasNetwork(cli, networkID) {
+		return "", errors.New("Network Already exists.")
+	}
+
 	// Create Networks
 	ctx := context.Background()
 	Cnetwork, err := cli.NetworkCreate(ctx, networkID, types.NetworkCreate{
@@ -78,6 +83,11 @@ func RemoveNetwork(endpoint, networkID string) error {
 		defer cli.Close()
 	}
 
+	// Check
+	if !HasNetwork(cli, networkID) {
+		return errors.New("Network 404.")
+	}
+
 	// Remove Networks
 	ctx := context.Background()
 	err = cli.NetworkRemove(ctx, networkID)
@@ -99,6 +109,11 @@ func InspectNetwork(endpoint, networkID string) (*types.NetworkResource, error) 
 		defer cli.Close()
 	}
 
+	// Check
+	if !HasNetwork(cli, networkID) {
+		return &types.NetworkResource{}, errors.New("Network 404.")
+	}
+
 	// Inspect Networks
 	ctx := context.Background()
 	Inetwork, err := cli.NetworkInspect(ctx, networkID)
@@ -107,5 +122,21 @@ func InspectNetwork(endpoint, networkID string) (*types.NetworkResource, error) 
 	} else {
 		return &types.NetworkResource{}, err
 	}
+}
 
+func HasNetwork(cli *client.Client, networkName string) bool {
+	// Get Networks
+	ctx := context.Background()
+	networks, err := cli.NetworkList(ctx, types.NetworkListOptions{})
+	if err == nil {
+		for _, network := range networks {
+			if network.Name == networkName {
+				return true
+			}
+		}
+		return false
+	} else {
+		log.Error(err)
+		return false
+	}
 }

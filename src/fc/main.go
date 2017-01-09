@@ -50,7 +50,7 @@ func main() {
 	// service actions
 	serviceGroup := router.Group("/service")
 	{
-		serviceGroup.GET("/:serviceID", inspectAservice)
+		serviceGroup.GET("/:serviceID", inspectService)
 		serviceGroup.GET("/:serviceID/status", getServiceStatus)
 	}
 
@@ -76,7 +76,7 @@ func listServices(c *gin.Context) {
 	}
 }
 
-func inspectAservice(c *gin.Context) {
+func inspectService(c *gin.Context) {
 	serviceID := c.Param("serviceID")
 	service, err := handler.InspectService(serviceID)
 	if err == nil {

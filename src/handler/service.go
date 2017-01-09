@@ -2,6 +2,7 @@ package handler
 
 import (
 	"config"
+	"errors"
 	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"github.com/docker/docker/api/types"
@@ -13,17 +14,17 @@ import (
 
 func ListServices(endpoint string) ([]string, error) {
 	log.Info(fmt.Sprintf("Get [ %s ] Services", endpoint))
-	host := "tcp://" + endpoint
-	version := "v1.24"
-	UA := map[string]string{"User-Agent": "engine-api-cli-1.0"}
-	cli, err := client.NewClient(host, version, nil, UA)
+	cli, err := DockerCli(endpoint)
 	if err != nil {
 		log.Error(err)
+		return []string{}, err
+	} else {
+		defer cli.Close()
 	}
-	ctx := context.Background()
-
 	// Get Services
+	ctx := context.Background()
 	services, err := cli.ServiceList(ctx, types.ServiceListOptions{})
+	defer cli.Close()
 	if err == nil {
 		s := make([]string, 0)
 		for _, service := range services {
@@ -36,39 +37,44 @@ func ListServices(endpoint string) ([]string, error) {
 }
 
 func InspectService(serviceID string) (swarm.Service, error) {
-	log.Info(fmt.Sprintf("Get Service [ %s ]", serviceID))
+	var S swarm.Service
+	var E error
 	for _, endpoint := range config.Conf.Endpoints {
-		host := "tcp://" + endpoint
-		version := "v1.24"
-		UA := map[string]string{"User-Agent": "engine-api-cli-1.0"}
-		cli, err := client.NewClient(host, version, nil, UA)
+		log.Info(fmt.Sprintf("Get Service [ %s ]", serviceID))
+		cli, err := DockerCli(endpoint)
 		if err != nil {
 			log.Error(err)
+			return swarm.Service{}, err
+		} else {
+			defer cli.Close()
 		}
-		ctx := context.Background()
 
 		// Get Service
-		// filters := filters.NewArgs()
-		// filters.Add("service", serviceID)
+		ctx := context.Background()
 		service, _, err := cli.ServiceInspectWithRaw(ctx, serviceID)
 		if err == nil {
-			return service, nil
+			S = service
+			E = nil
+			break
+		} else {
+			S = swarm.Service{}
+			E = err
 		}
 	}
-	return swarm.Service{}, nil
+	return S, E
 }
 
 func InspectServiceTasks(serviceID string) (swarm.Task, error) {
 	for _, endpoint := range config.Conf.Endpoints {
-		host := "tcp://" + endpoint
-		version := "v1.24"
-		UA := map[string]string{"User-Agent": "engine-api-cli-1.0"}
-		cli, err := client.NewClient(host, version, nil, UA)
+		log.Info(endpoint)
+		cli, err := DockerCli(endpoint)
 		if err != nil {
 			log.Error(err)
+			return swarm.Task{}, err
 		}
-		ctx := context.Background()
+
 		// Get Service
+		ctx := context.Background()
 		service, _, err := cli.ServiceInspectWithRaw(ctx, serviceID)
 		if err == nil {
 			filters := filters.NewArgs()
@@ -87,8 +93,81 @@ func InspectServiceTasks(serviceID string) (swarm.Task, error) {
 					task = t
 				}
 			}
+			defer cli.Close()
 			return task, nil
 		}
 	}
 	return swarm.Task{}, nil
+}
+
+func CreateService(endpoint, serviceName, serviceImage string) error {
+	cli, err := DockerCli(endpoint)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	// Service Info
+	service := &swarm.ServiceSpec{}
+	service.Name = serviceName
+	service.TaskTemplate.ContainerSpec.Image = serviceImage
+
+	// Check service
+	if HasService(cli, serviceName) == true {
+		e := errors.New(fmt.Sprintf("Service [ %s ] Already Exists.", serviceName))
+		return e
+	}
+
+	// Create Service
+	ctx := context.Background()
+	response, err := cli.ServiceCreate(ctx, *service, types.ServiceCreateOptions{})
+	defer cli.Close()
+	if err == nil {
+		log.Info(response)
+	} else {
+		return err
+	}
+	return nil
+}
+
+func RemoveService(endpoint, serviceID string) error {
+	cli, err := DockerCli(endpoint)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+
+	// Remove Service
+	ctx := context.Background()
+	if HasService(cli, serviceID) == false {
+		e := errors.New(fmt.Sprintf("Service [ %s ] Not Found", serviceID))
+		return e
+	}
+	err = cli.ServiceRemove(ctx, serviceID)
+	defer cli.Close()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func DockerCli(endpoint string) (*client.Client, error) {
+	host := "tcp://" + endpoint
+	version := "v1.24"
+	UA := map[string]string{"User-Agent": "engine-api-cli-1.0"}
+	cli, err := client.NewClient(host, version, nil, UA)
+	if err != nil {
+		log.Error(err)
+		return &client.Client{}, err
+	}
+	return cli, nil
+}
+
+func HasService(cli *client.Client, serviceID string) bool {
+	ctx := context.Background()
+	_, _, err := cli.ServiceInspectWithRaw(ctx, serviceID)
+	defer cli.Close()
+	if err != nil {
+		return false
+	}
+	return true
 }

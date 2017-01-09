@@ -37,11 +37,20 @@ func ListServices(endpoint string) ([]string, error) {
 }
 
 func InspectService(serviceID string) (swarm.Service, error) {
+<<<<<<< HEAD
+	log.Info(fmt.Sprintf("Get Service [ %s ]", serviceID))
+	for _, endpoint := range config.C.Endpoints {
+		host := "tcp://" + endpoint
+		version := "v1.24"
+		UA := map[string]string{"User-Agent": "engine-api-cli-1.0"}
+		cli, err := client.NewClient(host, version, nil, UA)
+=======
 	var S swarm.Service
 	var E error
 	for _, endpoint := range config.Conf.Endpoints {
 		log.Info(fmt.Sprintf("Get Service [ %s ]", serviceID))
 		cli, err := DockerCli(endpoint)
+>>>>>>> develop
 		if err != nil {
 			log.Error(err)
 			return swarm.Service{}, err
@@ -65,9 +74,17 @@ func InspectService(serviceID string) (swarm.Service, error) {
 }
 
 func InspectServiceTasks(serviceID string) (swarm.Task, error) {
+<<<<<<< HEAD
+	for _, endpoint := range config.C.Endpoints {
+		host := "tcp://" + endpoint
+		version := "v1.24"
+		UA := map[string]string{"User-Agent": "engine-api-cli-1.0"}
+		cli, err := client.NewClient(host, version, nil, UA)
+=======
 	for _, endpoint := range config.Conf.Endpoints {
 		log.Info(endpoint)
 		cli, err := DockerCli(endpoint)
+>>>>>>> develop
 		if err != nil {
 			log.Error(err)
 			return swarm.Task{}, err

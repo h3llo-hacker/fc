@@ -12,6 +12,7 @@ type MongoDB_Conf struct {
 	Port string
 	User string
 	Pass string
+	DB   string
 }
 
 type Config struct {
@@ -20,9 +21,9 @@ type Config struct {
 	LogLevel  string
 }
 
-var Conf Config
+var C Config
 
-func ReadConfig() (*Config, error) {
+func readConfig() *Config {
 	pwd, err := os.Getwd()
 	filePath := pwd + "/config.json"
 	log.Debug("Load config from file \"", filePath, "\"")
@@ -39,8 +40,8 @@ func ReadConfig() (*Config, error) {
 		panic(err)
 	}
 	// inject configuration
-	Conf = *configuration
-	return configuration, nil
+	C = *configuration
+	return configuration
 }
 
 func setLogLevel(logLevel string) {
@@ -57,11 +58,8 @@ func setLogLevel(logLevel string) {
 	}
 }
 
-func LoadConfig() (*Config, error) {
-	conf, err := ReadConfig()
-	if err != nil {
-		return nil, err
-	}
+func LoadConfig() *Config {
+	conf := readConfig()
 	setLogLevel(conf.LogLevel)
-	return conf, nil
+	return conf
 }

@@ -3,21 +3,25 @@
     "Failed": [
       {
         "ChallengeID": "xxx-xxx-xxx-xxx",
-        "StartTime": "1483943781"
+        "ContainerID": "xxx-xxx-xxx-xxx",
+        "Finishtime": 0,
+        "StartTime": 1483943881
       }
     ],
     "Finished": [
       {
         "ChallengeID": "xxx-xxx-xxx-xxx",
-        "Finishtime": "1483943781",
-        "StartTime": "1483943781"
+        "ContainerID": "xxx-xxx-xxx-xxx",
+        "Finishtime": 0,
+        "StartTime": 1483943881
       }
     ],
-    "OnProcess": [
+    "InProcess": [
       {
         "ChallengeID": "xxx-xxx-xxx-xxx",
         "ContainerID": "xxx-xxx-xxx-xxx",
-        "StartTime": "1483943881"
+        "Finishtime": 0,
+        "StartTime": 1483943881
       }
     ]
   },
@@ -33,7 +37,7 @@
           "OS": "Linux",
           "UA": "Chrome"
         },
-        "Time": "1483942704"
+        "Time": 1483942704
       },
       {
         "IP": "8.8.8.7",
@@ -42,13 +46,13 @@
           "OS": "Linux",
           "UA": "Chrome"
         },
-        "Time": "1483942917"
+        "Time": 1483942917
       }
     ],
     "LoginTimes": 18
   },
   "Password": "password",
-  "Quota": "1",
+  "Quota": 1,
   "Register": {
     "IP": "8.8.8.8",
     "Region": "China",
@@ -56,7 +60,7 @@
       "OS": "Linux",
       "UA": "Chrome"
     },
-    "Time": "1483942702"
+    "Time": 1483942702
   },
   "UserID": "xxx-xxx-xxx-xxx",
   "Username": "wrfly"

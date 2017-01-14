@@ -12,6 +12,7 @@ type MongoDB_Conf struct {
 	Port string
 	User string
 	Pass string
+	DB   string
 }
 
 type Config struct {
@@ -21,6 +22,8 @@ type Config struct {
 }
 
 var Conf Config
+
+var Salt = "h311oW0rlD"
 
 func ReadConfig() (*Config, error) {
 	pwd, err := os.Getwd()

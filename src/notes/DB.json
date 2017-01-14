@@ -7,7 +7,7 @@
 		"Port": "27017",
 		"User": "muser",
 		"Pass": "mpass",
-		"DB":"fc"
+        "DB":"fc"
 	},
 	"LogLevel": "debug"
 }

@@ -3,25 +3,22 @@
     "Failed": [
       {
         "ChallengeID": "xxx-xxx-xxx-xxx",
-        "ContainerID": "xxx-xxx-xxx-xxx",
         "Finishtime": 0,
-        "StartTime": 1483943881
+        "CreateTime": 1483943881
       }
     ],
     "Finished": [
       {
         "ChallengeID": "xxx-xxx-xxx-xxx",
-        "ContainerID": "xxx-xxx-xxx-xxx",
         "Finishtime": 0,
-        "StartTime": 1483943881
+        "CreateTime": 1483943881
       }
     ],
     "InProcess": [
       {
         "ChallengeID": "xxx-xxx-xxx-xxx",
-        "ContainerID": "xxx-xxx-xxx-xxx",
         "Finishtime": 0,
-        "StartTime": 1483943881
+        "CreateTime": 1483943881
       }
     ]
   },

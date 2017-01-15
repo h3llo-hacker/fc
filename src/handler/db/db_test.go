@@ -8,6 +8,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"strings"
 	"testing"
+	"types"
 )
 
 func TestMongoConn(t *testing.T) {
@@ -44,4 +45,28 @@ func TestMongoConn(t *testing.T) {
 	log.Info("result : ", result)
 
 	t.Log("pass")
+}
+
+func TestMongoInsert(t *testing.T) {
+	var user types.User
+	config.LoadConfig()
+	user.UserID = "UUUuuuid"
+	user.Password = "ppppassword"
+	collection := "user"
+	err := MongoInsert(collection, user)
+	if err != nil {
+		t.Error(err)
+	} else {
+		t.Log("Insert OK")
+	}
+}
+
+func TestMongoRemove(t *testing.T) {
+	config.LoadConfig()
+	err := MongoRemove("user", "userid", "UUUuuuid")
+	if err != nil {
+		t.Error(err)
+	} else {
+		t.Log("OK")
+	}
 }

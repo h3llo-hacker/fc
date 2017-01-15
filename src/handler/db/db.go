@@ -6,7 +6,7 @@ import (
 	"fmt"
 	log "github.com/Sirupsen/logrus"
 	mgo "gopkg.in/mgo.v2"
-	// "gopkg.in/mgo.v2/bson"
+	"gopkg.in/mgo.v2/bson"
 	// "os"
 	// "strings"
 )
@@ -32,4 +32,36 @@ func MongoConn(MongoDB config.MongoDB_Conf) (*mgo.Session, error) {
 		log.Error("Mongo Conn Error: ", err)
 		return &mgo.Session{}, err
 	}
+}
+
+func MongoInsert(C string, data interface{}) error {
+	MongoDB := config.Conf.MongoDB
+
+	mongo, err := MongoConn(MongoDB)
+	if err != nil {
+		log.Fatal(err)
+	}
+	db := mongo.DB(MongoDB.DB)
+	collection := db.C(C)
+	err = collection.Insert(data)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func MongoRemove(C, key, value string) error {
+	MongoDB := config.Conf.MongoDB
+
+	mongo, err := MongoConn(MongoDB)
+	if err != nil {
+		log.Fatal(err)
+	}
+	db := mongo.DB(MongoDB.DB)
+	collection := db.C(C)
+	err = collection.Remove(bson.M{key: value})
+	if err != nil {
+		return err
+	}
+	return nil
 }

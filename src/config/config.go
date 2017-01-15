@@ -31,8 +31,13 @@ func ReadConfig() (*Config, error) {
 	log.Debug("Load config from file \"", filePath, "\"")
 	file, err := os.Open(filePath)
 	if err != nil {
-		log.Error(err)
-		panic(err)
+		filePath = os.Getenv("FC_CONFIG_PATH") + "/config.json"
+		log.Debug("Load config from file \"", filePath, "\"")
+		file, err = os.Open(filePath)
+		if err != nil {
+			log.Error(err)
+			panic(err)
+		}
 	}
 	decoder := json.NewDecoder(file)
 	configuration := &Config{}

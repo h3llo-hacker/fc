@@ -13,7 +13,7 @@ import (
 )
 
 func ListServices(endpoint string) ([]string, error) {
-	log.Info(fmt.Sprintf("Get [ %s ] Services", endpoint))
+	log.Infof("Get [ %s ] Services", endpoint)
 	cli, err := DockerCli(endpoint)
 	if err != nil {
 		log.Error(err)
@@ -56,10 +56,10 @@ func InspectService(serviceID string) (swarm.Service, error) {
 			S = service
 			E = nil
 			break
-		} else {
-			S = swarm.Service{}
-			E = err
 		}
+		S = swarm.Service{}
+		E = err
+
 	}
 	return S, E
 }
@@ -97,6 +97,7 @@ func InspectServiceTasks(serviceID string) (swarm.Task, error) {
 			return task, nil
 		}
 	}
+
 	return swarm.Task{}, nil
 }
 
@@ -113,8 +114,7 @@ func CreateService(endpoint, serviceName, serviceImage string) error {
 
 	// Check service
 	if HasService(cli, serviceName) == true {
-		e := errors.New(fmt.Sprintf("Service [ %s ] Already Exists.", serviceName))
-		return e
+		return errors.New(fmt.Sprintf("Service [ %s ] Already Exists.", serviceName))
 	}
 
 	// Create Service

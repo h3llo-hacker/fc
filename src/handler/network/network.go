@@ -1,14 +1,13 @@
-package handler
+package network
 
 import (
 	// "config"
 	"errors"
 	"fmt"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/docker/docker/api/types"
-	// "github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/network"
-	// "github.com/docker/docker/api/types/swarm"
 	"github.com/docker/docker/client"
 	"golang.org/x/net/context"
 )
@@ -16,26 +15,25 @@ import (
 func ListNetworks(endpoint string) ([]string, error) {
 	log.Info(fmt.Sprintf("Get [ %s ] Networks", endpoint))
 	cli, err := DockerCli(endpoint)
+	defer cli.Close()
 	if err != nil {
 		log.Error(err)
-		return []string{}, err
-	} else {
-		defer cli.Close()
+		return nil, err
 	}
 
 	// Get Networks
 	ctx := context.Background()
 	networks, err := cli.NetworkList(ctx, types.NetworkListOptions{})
-	if err == nil {
-		n := make([]string, 0)
-		for _, network := range networks {
-			n = append(n, network.Name)
-		}
-		log.Debug(n)
-		return n, nil
-	} else {
-		return make([]string, 1), err
+	if err != nil {
+		return nil, err
 	}
+
+	n := make([]string, 0)
+	for _, network := range networks {
+		n = append(n, network.Name)
+	}
+	log.Debug(n)
+	return n, nil
 }
 
 func CreateNetwork(endpoint, networkID string) (string, error) {
@@ -76,11 +74,10 @@ func CreateNetwork(endpoint, networkID string) (string, error) {
 func RemoveNetwork(endpoint, networkID string) error {
 	log.Info(fmt.Sprintf("Remove Network [ %s ]", networkID))
 	cli, err := DockerCli(endpoint)
+	defer cli.Close()
 	if err != nil {
 		log.Error(err)
 		return err
-	} else {
-		defer cli.Close()
 	}
 
 	// Check
@@ -91,11 +88,11 @@ func RemoveNetwork(endpoint, networkID string) error {
 	// Remove Networks
 	ctx := context.Background()
 	err = cli.NetworkRemove(ctx, networkID)
-	if err == nil {
-		return nil
-	} else {
+	if err != nil {
 		return err
 	}
+
+	return nil
 
 }
 

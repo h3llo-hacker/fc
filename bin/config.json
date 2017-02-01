@@ -6,7 +6,8 @@
 		"Host": "127.0.0.1",
 		"Port": "27017",
 		"User": "muser",
-		"Pass": "mpass"
+		"Pass": "mpass",
+		"DB":"fc"
 	},
 	"LogLevel": "debug"
 }

@@ -2,9 +2,10 @@ package config
 
 import (
 	"encoding/json"
-	log "github.com/Sirupsen/logrus"
 	"os"
 	"strings"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 type MongoDB_Conf struct {
@@ -12,6 +13,7 @@ type MongoDB_Conf struct {
 	Port string
 	User string
 	Pass string
+	DB   string
 }
 
 type Config struct {
@@ -22,15 +24,36 @@ type Config struct {
 
 var Conf Config
 
+var Salt = "h311oW0rlD"
+
+func PathExist(_path string) bool {
+	_, err := os.Stat(_path)
+	if err != nil && os.IsNotExist(err) {
+		return false
+	}
+	return true
+}
+
 func ReadConfig() (*Config, error) {
 	pwd, err := os.Getwd()
 	filePath := pwd + "/config.json"
-	log.Debug("Load config from file \"", filePath, "\"")
-	file, err := os.Open(filePath)
-	if err != nil {
-		log.Error(err)
-		panic(err)
+
+	if !PathExist(filePath) {
+		filePath = os.Getenv("FC_CONFIG")
 	}
+
+	if filePath == "" {
+		filePath = "/home/mr/Documents/work_space/fc/bin/config.json"
+	}
+
+	if !PathExist(filePath) {
+		log.Errorf("Config File [%s] Not Found!", filePath)
+		os.Exit(1)
+	}
+
+	log.Debug("Load config from file \"", filePath, "\"")
+
+	file, _ := os.Open(filePath)
 	decoder := json.NewDecoder(file)
 	configuration := &Config{}
 	err = decoder.Decode(configuration)
@@ -44,7 +67,7 @@ func ReadConfig() (*Config, error) {
 }
 
 func setLogLevel(logLevel string) {
-	log.Debug("Setting log level ", logLevel)
+	log.Debugf("Setting log level: %s", logLevel)
 	switch strings.ToLower(logLevel) {
 	case "warn":
 		log.SetLevel(log.WarnLevel)

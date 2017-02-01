@@ -1,0 +1,20 @@
+{
+  "ID": "xxx-xxx-xxx",
+  "Name": "templateName",
+  "Services": [
+    {
+      "ID": "xxx-xxx-xxx",
+      "Name": "xxx-xxx-xxx",
+      "Spec": {
+        "Image": "xxx-xxx-xxx"
+      }
+    },
+    {
+      "ID": "xxx-xxx-xxx",
+      "Name": "xxx-xxx-xxx",
+      "Spec": {
+        "Image": "xxx-xxx-xxx"
+      }
+    }
+  ]
+}

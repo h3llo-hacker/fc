@@ -4,14 +4,26 @@ import (
 	"config"
 	// "encoding/json"
 	"fmt"
+	// "os"
+	// "strings"
+
 	log "github.com/Sirupsen/logrus"
 	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
-	// "os"
-	// "strings"
+	"types"
 )
 
+var mongoConn *mgo.Session
+
 func MongoConn(MongoDB config.MongoDB_Conf) (*mgo.Session, error) {
+	if mongoConn != nil {
+		return mongoConn, nil
+	}
+
+	if config.Conf.MongoDB.Host == "" {
+		config.LoadConfig()
+		MongoDB = config.Conf.MongoDB
+	}
 	user := MongoDB.User
 	pass := MongoDB.Pass
 	host := MongoDB.Host
@@ -24,14 +36,14 @@ func MongoConn(MongoDB config.MongoDB_Conf) (*mgo.Session, error) {
 	if user == "" {
 		url = fmt.Sprintf("mongodb://%s:%s/%s", host, port, db)
 	}
-	log.Info("MongoDB Conn:", url)
+	log.Debugln("MongoDB Conn:", url)
 	mongo, err := mgo.Dial(url)
-	if err == nil {
-		return mongo, nil
-	} else {
-		log.Error("Mongo Conn Error: ", err)
+	if err != nil {
+		log.Errorf("Mongo Conn Error: [%v], Mongo ConnUrl: [%v]", err, url)
 		return &mgo.Session{}, err
 	}
+	mongoConn = mongo
+	return mongoConn, nil
 }
 
 func MongoInsert(C string, data interface{}) error {
@@ -50,7 +62,7 @@ func MongoInsert(C string, data interface{}) error {
 	return nil
 }
 
-func MongoRemove(C, key, value string) error {
+func MongoRemove(C string, selector bson.M) error {
 	MongoDB := config.Conf.MongoDB
 
 	mongo, err := MongoConn(MongoDB)
@@ -59,7 +71,49 @@ func MongoRemove(C, key, value string) error {
 	}
 	db := mongo.DB(MongoDB.DB)
 	collection := db.C(C)
-	err = collection.Remove(bson.M{key: value})
+	err = collection.Remove(selector)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func MongoFind(C string, query bson.M) ([]interface{}, error) {
+	MongoDB := config.Conf.MongoDB
+
+	mongo, err := MongoConn(MongoDB)
+	if err != nil {
+		return nil, err
+	}
+	db := mongo.DB(MongoDB.DB)
+	collection := db.C(C)
+	result := make([]interface{}, 0)
+	collection.Find(query).All(&result)
+	return result, nil
+}
+
+func MongoFindUsers(C string, query bson.M, result *[]types.User) error {
+	MongoDB := config.Conf.MongoDB
+	mongo, err := MongoConn(MongoDB)
+	if err != nil {
+		return err
+	}
+	db := mongo.DB(MongoDB.DB)
+	collection := db.C(C)
+	err = collection.Find(query).All(result)
+	return err
+}
+
+func MongoUpdate(C string, selector bson.M, update interface{}) error {
+	MongoDB := config.Conf.MongoDB
+
+	mongo, err := MongoConn(MongoDB)
+	if err != nil {
+		log.Fatal(err)
+	}
+	db := mongo.DB(MongoDB.DB)
+	collection := db.C(C)
+	err = collection.Update(selector, update)
 	if err != nil {
 		return err
 	}

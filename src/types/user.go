@@ -1,46 +1,50 @@
 package types
 
+import (
+	"time"
+)
+
 type System_struct struct {
-	OS string `json:"OS"`
-	UA string `json:"UA"`
+	OS string `bson:"OS"`
+	UA string `bson:"UA"`
 }
 
 type Register_struct struct {
-	IP     string        `json:"IP"`
-	Region string        `json:"Region"`
-	System System_struct `json:"System"`
-	Date   int           `json:"Date"`
+	IP     string        `bson:"IP"`
+	Region string        `bson:"Region"`
+	System System_struct `bson:"System"`
+	Date   time.Time     `bson:"Date"`
 }
 
 type UserChallenge struct {
-	ChallengeID string `json:"ChallengeID"`
-	TemplateID  string `json:"TemplateID"`
-	Flag        string `json:"Flag"`
-	FinishTime  int    `json:"FinishTime"`
-	CreateTime  int    `json:"CreateTime"`
+	ChallengeID string `bson:"ChallengeID"`
+	TemplateID  string `bson:"TemplateID"`
+	Flag        string `bson:"Flag"`
+	FinishTime  int    `bson:"FinishTime"`
+	CreateTime  int    `bson:"CreateTime"`
 }
 
 type Challenge_types struct {
-	Failed    []UserChallenge
-	Finished  []UserChallenge
-	InProcess []UserChallenge
+	Failed    []UserChallenge `bson:"Failed"`
+	Finished  []UserChallenge `bson:"Finished"`
+	InProcess []UserChallenge `bson:"InProcess"`
 }
 
 type Login_struct struct {
-	LastLogins []Register_struct `json:"LastLogins"`
-	LoginTimes int               `json:"LoginTimes"`
+	LastLogins []Register_struct `bson:"LastLogins"`
+	LoginTimes int               `bson:"LoginTimes"`
 }
 type User struct {
-	Challenges   Challenge_types `json:"Challenges"`
-	EmailAddress string          `json:"EmailAddress"`
-	Following    []string        `json:"Following"`
-	Followers    []string        `json:"Followers"`
-	Login        Login_struct    `json:"Login"`
-	Password     string          `json:"Password"`
-	Quota        int             `json:"Quota"`
-	Username     string          `json:"Username"`
-	UserID       string          `json:"UserID"`
-	Register     Register_struct `json:"Register"`
+	Challenges   Challenge_types `bson:"Challenges"`
+	EmailAddress string          `bson:"EmailAddress"`
+	Following    []string        `bson:"Following"`
+	Followers    []string        `bson:"Followers"`
+	Login        Login_struct    `bson:"Login"`
+	Password     string          `bson:"Password"`
+	Quota        int             `bson:"Quota"`
+	Username     string          `bson:"Username"`
+	UserID       string          `bson:"UserID"`
+	Register     Register_struct `bson:"Register"`
 }
 
 // type System_struct struct {

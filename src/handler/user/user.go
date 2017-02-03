@@ -6,17 +6,23 @@ import (
 	"types"
 
 	log "github.com/Sirupsen/logrus"
+	valid "github.com/asaskevich/govalidator"
 	"github.com/nu7hatch/gouuid"
 	"gopkg.in/mgo.v2/bson"
-	db "handler/db"
+	db "utils/db"
 )
 
 func AddUser(user types.User) error {
-	if hasSameEmailAddr(user.EmailAddress) {
+	if !ValidateUser(&user) {
+		return errors.New("User Format Error.")
+	}
+	if EmailAddrExist(user.EmailAddress) {
 		return errors.New("Email Address Has Already Used.")
 	}
 	uid, _ := uuid.NewV4()
 	user.UserID = fmt.Sprintf("%v", uid)
+	user.UserNum = getUserNum()
+	user.IsActive = false
 	C := "user"
 	err := db.MongoInsert(C, user)
 	if err != nil {
@@ -26,7 +32,7 @@ func AddUser(user types.User) error {
 }
 
 func RmUser(emailAddr string) error {
-	if !hasSameEmailAddr(emailAddr) {
+	if !EmailAddrExist(emailAddr) {
 		return errors.New("User Email Not Found")
 	}
 	C := "user"
@@ -39,7 +45,7 @@ func RmUser(emailAddr string) error {
 }
 
 func UpdateUser(emailAddr string, update bson.M) error {
-	if !hasSameEmailAddr(emailAddr) {
+	if !EmailAddrExist(emailAddr) {
 		return errors.New("User Email Not Found")
 	}
 	// update := bson.M{"$set": bson.M{"EmailAddress": "mr@kfd.me"}}
@@ -60,7 +66,7 @@ func QueryUsers(emailAddr string) ([]types.User, error) {
 	return users, nil
 }
 
-func hasSameEmailAddr(emailAddr string) bool {
+func EmailAddrExist(emailAddr string) bool {
 	C := "user"
 	selector := bson.M{"EmailAddress": emailAddr}
 	var users []types.User
@@ -69,4 +75,26 @@ func hasSameEmailAddr(emailAddr string) bool {
 		return false
 	}
 	return true
+}
+
+func ValidateUser(user *types.User) bool {
+	if !valid.IsEmail(user.EmailAddress) {
+		return false
+	}
+	if !valid.IsURL(user.WebSite) {
+		return false
+	}
+	if len(user.Intro) > 423 {
+		user.Intro = user.Intro[:423]
+	}
+	return true
+}
+
+func getUserNum() int {
+	C := "user"
+	selector := bson.M{}
+	var users []types.User
+	db.MongoFindUsers(C, selector, &users)
+	// log.Debugf("There are %d users in total.", len(users))
+	return len(users)
 }

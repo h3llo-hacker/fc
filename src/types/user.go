@@ -10,7 +10,7 @@ type System_struct struct {
 }
 
 type Register_struct struct {
-	IP     string        `bson:"IP"`
+	IP     string        `bson:"IP",valid:"ipv4"`
 	Region string        `bson:"Region"`
 	System System_struct `bson:"System"`
 	Date   time.Time     `bson:"Date"`
@@ -35,16 +35,20 @@ type Login_struct struct {
 	LoginTimes int               `bson:"LoginTimes"`
 }
 type User struct {
+	UserID       string          `bson:"UserID"`
+	UserNum      int             `bson:"UserNum"`
+	Username     string          `bson:"Username"`
+	Password     string          `bson:"Password"`
+	Intro        string          `bson:"Intro"`
+	EmailAddress string          `bson:"EmailAddress",valid:"email"`
 	Challenges   Challenge_types `bson:"Challenges"`
-	EmailAddress string          `bson:"EmailAddress"`
 	Following    []string        `bson:"Following"`
 	Followers    []string        `bson:"Followers"`
 	Login        Login_struct    `bson:"Login"`
-	Password     string          `bson:"Password"`
 	Quota        int             `bson:"Quota"`
-	Username     string          `bson:"Username"`
-	UserID       string          `bson:"UserID"`
 	Register     Register_struct `bson:"Register"`
+	IsActive     bool            `bson:"IsActive"`
+	WebSite      string          `bson:"WebSite",valid:"url"`
 }
 
 // type System_struct struct {

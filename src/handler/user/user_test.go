@@ -3,7 +3,7 @@ package handler
 import (
 	"testing"
 	"time"
-	"utils/password"
+	"utils"
 
 	"gopkg.in/mgo.v2/bson"
 	"types"

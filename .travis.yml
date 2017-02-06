@@ -3,3 +3,4 @@ install:
     - export GOPATH=$HOME/gopath/src/github.com/wrfly/fc
     - go env
 script: go install fc
+

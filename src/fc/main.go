@@ -23,6 +23,7 @@ func main() {
 	log.Debug("Swarmkit Endpoints: ", conf.Endpoints)
 
 	router := gin.Default()
+
 	routes.Router(router)
 
 	server := &http.Server{
@@ -32,6 +33,7 @@ func main() {
 		WriteTimeout:   5 * time.Second,
 		MaxHeaderBytes: 1 << 20,
 	}
+
 	err = server.ListenAndServe()
 	if err != nil {
 		log.Errorf("FC Error: %v", err)

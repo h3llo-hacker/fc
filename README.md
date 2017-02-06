@@ -1,9 +1,9 @@
 # fc
 first controller
 
-[![Master Build Status](https://travis-ci.com/wrfly/fc.svg?token=LqBN16z2mHbvTyyYr9hc&branch=master)](https://travis-ci.com/wrfly/fc)
+Master: [![Master Build Status](https://travis-ci.com/wrfly/fc.svg?token=LqBN16z2mHbvTyyYr9hc&branch=master)](https://travis-ci.com/wrfly/fc)
 
-[![Develop Build Status](https://travis-ci.com/wrfly/fc.svg?token=LqBN16z2mHbvTyyYr9hc&branch=develop)](https://travis-ci.com/wrfly/fc)
+Develop: [![Develop Build Status](https://travis-ci.com/wrfly/fc.svg?token=LqBN16z2mHbvTyyYr9hc&branch=develop)](https://travis-ci.com/wrfly/fc)
 
 docker volume create --name mongodb
 

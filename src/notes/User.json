@@ -60,5 +60,10 @@
     "Time": 1483942702
   },
   "UserID": "xxx-xxx-xxx-xxx",
-  "Username": "wrfly"
+  "UserNum": 0,
+  "Username": "wrfly",
+  "IsActive": true,
+  "Intro": "I'm a coder. I like hack.",
+  "WebSite": "http://kfd.me",
+  "UserURL": "wrfly"
 }

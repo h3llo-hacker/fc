@@ -24,7 +24,7 @@ type Config struct {
 
 var Conf Config
 
-var Salt = "h311oW0rlD"
+const Salt = "h311oW0rlD"
 
 func PathExist(_path string) bool {
 	_, err := os.Stat(_path)

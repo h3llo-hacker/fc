@@ -63,6 +63,7 @@
   "UserNum": 0,
   "Username": "wrfly",
   "IsActive": true,
-  "Intro" : "I'm a coder. I like hack.",
-  "WebSite": "http://kfd.me"
+  "Intro": "I'm a coder. I like hack.",
+  "WebSite": "http://kfd.me",
+  "UserURL": "wrfly"
 }

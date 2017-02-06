@@ -2,9 +2,9 @@ package utils
 
 import (
 	"config"
-	// "encoding/json"
+	"errors"
 	"fmt"
-	// "os"
+	"time"
 	// "strings"
 
 	log "github.com/Sirupsen/logrus"
@@ -17,7 +17,9 @@ var mongoConn *mgo.Session
 
 func MongoConn(MongoDB config.MongoDB_Conf) (*mgo.Session, error) {
 	if mongoConn != nil {
-		return mongoConn, nil
+		if mongoConn.Ping() == nil {
+			return mongoConn, nil
+		}
 	}
 
 	if config.Conf.MongoDB.Host == "" {
@@ -37,10 +39,12 @@ func MongoConn(MongoDB config.MongoDB_Conf) (*mgo.Session, error) {
 		url = fmt.Sprintf("mongodb://%s:%s/%s", host, port, db)
 	}
 	log.Debugln("MongoDB Conn:", url)
-	mongo, err := mgo.Dial(url)
+	mongo, err := mgo.DialWithTimeout(url, 3*time.Second)
 	if err != nil {
-		log.Errorf("Mongo Conn Error: [%v], Mongo ConnUrl: [%v]", err, url)
-		return &mgo.Session{}, err
+		log.Errorf("Mongo Conn Error: [%v], Mongo ConnUrl: [%v]",
+			err, url)
+		errTextReturn := fmt.Sprintf("Mongo Conn Error: [%v]", err)
+		return &mgo.Session{}, errors.New(errTextReturn)
 	}
 	mongoConn = mongo
 	return mongoConn, nil
@@ -78,7 +82,7 @@ func MongoRemove(C string, selector bson.M) error {
 	return nil
 }
 
-func MongoFind(C string, query bson.M) ([]interface{}, error) {
+func MongoFind(C string, query, selector bson.M) ([]interface{}, error) {
 	MongoDB := config.Conf.MongoDB
 
 	mongo, err := MongoConn(MongoDB)
@@ -88,11 +92,11 @@ func MongoFind(C string, query bson.M) ([]interface{}, error) {
 	db := mongo.DB(MongoDB.DB)
 	collection := db.C(C)
 	result := make([]interface{}, 0)
-	collection.Find(query).All(&result)
-	return result, nil
+	err = collection.Find(query).Select(selector).All(&result)
+	return result, err
 }
 
-func MongoFindUsers(C string, query bson.M, result *[]types.User) error {
+func MongoFindUsers(C string, query, selector bson.M, result *[]types.User) error {
 	MongoDB := config.Conf.MongoDB
 	mongo, err := MongoConn(MongoDB)
 	if err != nil {
@@ -100,7 +104,7 @@ func MongoFindUsers(C string, query bson.M, result *[]types.User) error {
 	}
 	db := mongo.DB(MongoDB.DB)
 	collection := db.C(C)
-	err = collection.Find(query).All(result)
+	err = collection.Find(query).Select(selector).All(result)
 	return err
 }
 

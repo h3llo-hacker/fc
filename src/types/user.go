@@ -37,7 +37,8 @@ type Login_struct struct {
 type User struct {
 	UserID       string          `bson:"UserID"`
 	UserNum      int             `bson:"UserNum"`
-	Username     string          `bson:"Username"`
+	UserName     string          `bson:"UserName"`
+	UserURL      string          `bson:"UserURL"`
 	Password     string          `bson:"Password"`
 	Intro        string          `bson:"Intro"`
 	EmailAddress string          `bson:"EmailAddress",valid:"email"`

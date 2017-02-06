@@ -3,18 +3,18 @@ package handler
 import (
 	"testing"
 	"time"
+	"utils/password"
 
 	"gopkg.in/mgo.v2/bson"
 	"types"
-	"utils/password"
 )
 
 func TestAddUser(t *testing.T) {
 	var user types.User
 
-	user.Username = "testUser"
+	user.UserName = "大王111aa"
 	user.Password = utils.Password("password")
-	user.EmailAddress = "test@test.com"
+	user.EmailAddress = "test6@test.com"
 	user.Quota = 1
 	user.IsActive = true
 	user.Register = types.Register_struct{
@@ -44,14 +44,26 @@ func TestAddUser(t *testing.T) {
 	t.Logf("Add User Error: [%v]", err)
 }
 
-func TestQueryUsers(t *testing.T) {
-	emailAddr := "test@test.com"
-	users, err := QueryUsers(emailAddr)
+func TestQueryUsersAll(t *testing.T) {
+	emailAddr := "test2@test.com"
+	users, err := QueryUsers(emailAddr, nil)
 	if err != nil {
 		t.Errorf("Query User Error: [%v]", err)
 	}
 	for _, user := range users {
-		t.Log(user.Password)
+		t.Log(user)
+	}
+}
+
+func TestQueryUsersWithItem(t *testing.T) {
+	emailAddr := "test2@test.com"
+	items := []string{"UserID", "Username", "Password"}
+	users, err := QueryUsers(emailAddr, items)
+	if err != nil {
+		t.Errorf("Query User Error: [%v]", err)
+	}
+	for _, user := range users {
+		t.Log(user)
 	}
 }
 

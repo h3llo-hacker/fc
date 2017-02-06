@@ -63,7 +63,7 @@ func TestMongoInsert(t *testing.T) {
 
 func TestMongoFind(t *testing.T) {
 	query := bson.M{"UserID": "userID"}
-	result, err := MongoFind("user", query)
+	result, err := MongoFind("user", query, nil)
 	if err != nil {
 		t.Error(err)
 	} else {
@@ -72,8 +72,8 @@ func TestMongoFind(t *testing.T) {
 }
 
 func TestMongoUpdate(t *testing.T) {
-	selector := bson.M{"UserID": "userID"}
-	result, err := MongoFind("user", selector)
+	query := bson.M{"UserID": "userID"}
+	result, err := MongoFind("user", query, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -81,11 +81,11 @@ func TestMongoUpdate(t *testing.T) {
 	t.Log(len(result))
 	update := bson.M{"$set": bson.M{"EmailAddress": "mr@kfd.mememememem"}}
 
-	err = MongoUpdate("user", selector, update)
+	err = MongoUpdate("user", query, update)
 	if err != nil {
 		t.Error(err)
 	} else {
-		result, _ := MongoFind("user", selector)
+		result, _ := MongoFind("user", query, nil)
 		t.Log(result)
 	}
 }

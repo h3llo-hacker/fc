@@ -1,4 +1,4 @@
-package network
+package handler
 
 import (
 	// "config"
@@ -10,6 +10,8 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"golang.org/x/net/context"
+
+	. "handler/service"
 )
 
 func ListNetworks(endpoint string) ([]string, error) {

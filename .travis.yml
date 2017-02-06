@@ -1,2 +1,4 @@
 language: go
-script: go get fc && go build fc
+install:
+      - go install fc
+script: go build fc

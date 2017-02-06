@@ -1,0 +1,69 @@
+{
+  "Challenges": {
+    "Failed": [
+      {
+        "ChallengeID": "xxx-xxx-xxx-xxx",
+        "Finishtime": 0,
+        "CreateTime": 1483943881
+      }
+    ],
+    "Finished": [
+      {
+        "ChallengeID": "xxx-xxx-xxx-xxx",
+        "Finishtime": 0,
+        "CreateTime": 1483943881
+      }
+    ],
+    "InProcess": [
+      {
+        "ChallengeID": "xxx-xxx-xxx-xxx",
+        "Finishtime": 0,
+        "CreateTime": 1483943881
+      }
+    ]
+  },
+  "EmailAddress": "mr@kfd.me",
+  "Following": [],
+  "Followers": [],
+  "Login": {
+    "LastLogins": [
+      {
+        "IP": "8.8.8.8",
+        "Region": "China",
+        "System": {
+          "OS": "Linux",
+          "UA": "Chrome"
+        },
+        "Time": 1483942704
+      },
+      {
+        "IP": "8.8.8.7",
+        "Region": "America",
+        "System": {
+          "OS": "Linux",
+          "UA": "Chrome"
+        },
+        "Time": 1483942917
+      }
+    ],
+    "LoginTimes": 18
+  },
+  "Password": "password",
+  "Quota": 1,
+  "Register": {
+    "IP": "8.8.8.8",
+    "Region": "China",
+    "System": {
+      "OS": "Linux",
+      "UA": "Chrome"
+    },
+    "Time": 1483942702
+  },
+  "UserID": "xxx-xxx-xxx-xxx",
+  "UserNum": 0,
+  "Username": "wrfly",
+  "IsActive": true,
+  "Intro": "I'm a coder. I like hack.",
+  "WebSite": "http://kfd.me",
+  "UserURL": "wrfly"
+}

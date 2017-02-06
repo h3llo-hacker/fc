@@ -1,0 +1,2 @@
+language: go
+script: go get github.com/wrfly/fc && go test

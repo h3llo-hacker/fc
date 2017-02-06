@@ -1,2 +1,6 @@
 language: go
+<<<<<<< HEAD
 script: go get fc
+=======
+script: go build fc
+>>>>>>> 11bfd1f7f9fa6839a68519a4162c4a9c14ccdecf

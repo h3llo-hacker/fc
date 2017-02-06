@@ -2,6 +2,4 @@ language: go
 install:
     - export GOPATH=$HOME/gopath/src/github.com/wrfly/fc
     - go env
-    - ls
-    - ls $GOPATH
-#script: go install fc
+script: go install fc

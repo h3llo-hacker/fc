@@ -1,2 +1,2 @@
 language: go
-script: go build fc
+script: go get fc

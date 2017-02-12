@@ -1,13 +1,15 @@
 {
-	"Endpoints":[
-		"127.0.0.1:2374"
-	],
-	"MongoDB":{
-		"Host": "127.0.0.1",
-		"Port": "27017",
-		"User": "muser",
-		"Pass": "mpass",
-		"DB":"fc"
-	},
-	"LogLevel": "debug"
+  "Endpoints": [
+    "127.0.0.1:2374"
+  ],
+  "MongoDB": {
+    "Host": "127.0.0.1",
+    "Port": "27017",
+    "User": "muser",
+    "Pass": "mpass",
+    "DB": "fc"
+  },
+  "LogLevel": "debug",
+  "SendGridKey": "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",
+  "InviteMode":true
 }

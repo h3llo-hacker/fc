@@ -17,9 +17,11 @@ type MongoDB_Conf struct {
 }
 
 type Config struct {
-	Endpoints []string
-	MongoDB   MongoDB_Conf
-	LogLevel  string
+	Endpoints   []string
+	MongoDB     MongoDB_Conf
+	LogLevel    string
+	SendGridKey string
+	InviteMode  bool
 }
 
 var Conf Config

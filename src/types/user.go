@@ -1,12 +1,21 @@
 package types
 
 import (
+	"errors"
+	"strings"
 	"time"
+
+	valid "github.com/asaskevich/govalidator"
 )
 
 type System_struct struct {
 	OS string `bson:"OS"`
 	UA string `bson:"UA"`
+}
+
+type Invite_struct struct {
+	InviteCodes []string `bson:"InviteCodes"`
+	InvitedBy   string   `bson:"InvitedBy"`
 }
 
 type Register_struct struct {
@@ -50,47 +59,38 @@ type User struct {
 	Register     Register_struct `bson:"Register"`
 	IsActive     bool            `bson:"IsActive"`
 	WebSite      string          `bson:"WebSite",valid:"url"`
+	Invite       Invite_struct   `bson:"Invite"`
 }
 
-// type System_struct struct {
-// 	OS string
-// 	UA string
-// }
+func (user *User) ValidateUser() error {
+	// First check email address
+	if !valid.IsEmail(user.EmailAddress) {
+		return errors.New("wrong email format:" + user.EmailAddress)
+	}
 
-// type Register_struct struct {
-// 	IP     string
-// 	Region string
-// 	System System_struct
-// 	Date   int
-// }
+	// check website
+	if user.WebSite != "" {
+		if !valid.IsURL(user.WebSite) {
+			return errors.New("wrong website format")
+		}
+	}
 
-// type UserChallenge struct {
-// 	ChallengeID string
-// 	TemplateID  string
-// 	Flag        string
-// 	FinishTime  int
-// 	CreateTime  int
-// }
+	if user.UserURL != "" {
+		user.UserURL = strings.ToLower(user.UserURL)
+	}
 
-// type Challenge_types struct {
-// 	Failed    []UserChallenge
-// 	Finished  []UserChallenge
-// 	InProcess []UserChallenge
-// }
+	if user.UserName == "" || user.Password == "" || user.EmailAddress == "" {
+		return errors.New("username or password or email cannot be empty.")
+	}
 
-// type Login_struct struct {
-// 	LastLogins []Register_struct
-// 	LoginTimes int
-// }
-// type User struct {
-// 	Challenges   Challenge_types
-// 	EmailAddress string
-// 	Following    []string
-// 	Followers    []string
-// 	Login        Login_struct
-// 	Password     string
-// 	Quota        int
-// 	Username     string
-// 	UserID       string
-// 	Register     Register_struct
-// }
+	user.UserName = strings.TrimSpace(user.UserName)
+	if len(user.UserName) < 6 || len(user.UserName) > 66 {
+		return errors.New("make sure [6 < username < 66]")
+	}
+
+	if len(user.Intro) > 423 {
+		user.Intro = user.Intro[:423]
+	}
+
+	return nil
+}

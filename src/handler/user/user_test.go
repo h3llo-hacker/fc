@@ -1,4 +1,4 @@
-package handler
+package user
 
 import (
 	"testing"
@@ -10,11 +10,11 @@ import (
 )
 
 func TestAddUser(t *testing.T) {
-	var user types.User
+	var user User
 
 	user.UserName = "大王111aa"
 	user.Password = utils.Password("password")
-	user.EmailAddress = "test6@test.com"
+	user.EmailAddress = "test@test.com"
 	user.Quota = 1
 	user.IsActive = true
 	user.Register = types.Register_struct{
@@ -30,23 +30,24 @@ func TestAddUser(t *testing.T) {
 	user.Intro = "一一"
 
 	t.Log("Add a Validated user...")
-	err := AddUser(user)
+	err := user.AddUser(types.User(user))
 	if err != nil {
 		t.Errorf("Add User Error: [%v]", err)
 	}
 
 	t.Log("Add a Unvalidated user...")
 	user.EmailAddress = "mr@@kfd.me"
-	err = AddUser(user)
+	err = user.AddUser(types.User(user))
 	if err == nil {
 		t.Errorf("Add Unvalidated Error %v", err)
 	}
 	t.Logf("Add User Error: [%v]", err)
 }
 
-func TestQueryUsersAll(t *testing.T) {
-	emailAddr := "test2@test.com"
-	users, err := QueryUsers(emailAddr, nil)
+func TestQueryUserAll(t *testing.T) {
+	var user User
+	user.EmailAddress = ""
+	users, err := user.QueryUser(nil)
 	if err != nil {
 		t.Errorf("Query User Error: [%v]", err)
 	}
@@ -55,10 +56,11 @@ func TestQueryUsersAll(t *testing.T) {
 	}
 }
 
-func TestQueryUsersWithItem(t *testing.T) {
-	emailAddr := "test2@test.com"
+func TestQueryUserWithItem(t *testing.T) {
+	var user User
+	user.EmailAddress = "test@test.com"
 	items := []string{"UserID", "Username", "Password"}
-	users, err := QueryUsers(emailAddr, items)
+	users, err := user.QueryUser(items)
 	if err != nil {
 		t.Errorf("Query User Error: [%v]", err)
 	}
@@ -68,9 +70,10 @@ func TestQueryUsersWithItem(t *testing.T) {
 }
 
 func TestUpdateUser(t *testing.T) {
-	emailAddr := "test@test.com"
-	update := bson.M{"$set": bson.M{"EmailAddress": "test@test.com"}}
-	err := UpdateUser(emailAddr, update)
+	var user User
+	user.EmailAddress = "test@test.com"
+	update := bson.M{"$set": bson.M{"EmailAddress": "hello@test.com"}}
+	err := user.UpdateUser(update)
 	if err != nil {
 		t.Errorf("Update User Errror: [%v]", err)
 	} else {
@@ -79,8 +82,9 @@ func TestUpdateUser(t *testing.T) {
 }
 
 func TestRmUser(t *testing.T) {
-	emailAddr := "test@test.com"
-	err := RmUser(emailAddr)
+	var user User
+	user.EmailAddress = "test@test.com"
+	err := user.RmUser()
 	if err != nil {
 		t.Errorf("Remove User Error: [%v]", err)
 	} else {

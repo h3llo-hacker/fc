@@ -65,5 +65,12 @@
   "IsActive": true,
   "Intro": "I'm a coder. I like hack.",
   "WebSite": "http://kfd.me",
-  "UserURL": "wrfly"
+  "UserURL": "wrfly",
+  "Invite": {
+    "Codes": [
+      "xxx-xxx-xxx-xxxa",
+      "xxx-xxx-xxx-xxxb"
+    ],
+    "InviteBy": "xxx-xxx-xxx-xxxb"
+  }
 }

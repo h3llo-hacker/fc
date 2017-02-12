@@ -15,11 +15,10 @@ func TaobaoIP2Region(ip string) (string, error) {
 	Region := ""
 	URL := "http://ip.taobao.com/service/getIpInfo.php?ip=" + ip
 	client := &http.Client{
-		Timeout: 1 * time.Second,
+		Timeout: 3 * time.Second,
 	}
 	resp, err := client.Get(URL)
 	if err != nil {
-		fmt.Println("http error:", err)
 		return "", err
 	}
 	defer resp.Body.Close()
@@ -53,7 +52,7 @@ func BaiduIP2Region(ip string) (string, error) {
 	for _, host := range hosts {
 		URL := protocal + host + url
 		client := &http.Client{
-			Timeout: 1 * time.Second,
+			Timeout: 3 * time.Second,
 		}
 		resp, err := client.Get(URL)
 		if err != nil {
@@ -77,7 +76,7 @@ func OpenGPSIP2Region(ip string) (string, error) {
 	Region := ""
 	URL := "https://www.opengps.cn/Data/IP/IPLocHiAcc.ashx"
 	client := &http.Client{
-		Timeout: 1 * time.Second,
+		Timeout: 3 * time.Second,
 	}
 	postBody := strings.NewReader("ip=" + ip)
 	bodyType := "application/x-www-form-urlencoded"
@@ -102,19 +101,42 @@ func OpenGPSIP2Region(ip string) (string, error) {
 }
 
 func IP2Region(ip string) string {
-	r, err := OpenGPSIP2Region(ip)
-	if err == nil {
-		return r
+	ch := make(chan string, 3)
+	defer close(ch)
+
+	go func(ch chan string) {
+		r, err := OpenGPSIP2Region(ip)
+		if err != nil {
+			ch <- ""
+			return
+		}
+		ch <- r
+	}(ch)
+
+	go func(ch chan string) {
+		r, err := BaiduIP2Region(ip)
+		if err != nil {
+			ch <- ""
+			return
+		}
+		ch <- r
+	}(ch)
+
+	go func(ch chan string) {
+		r, err := TaobaoIP2Region(ip)
+		if err != nil {
+			ch <- ""
+			return
+		}
+		ch <- r
+	}(ch)
+
+	for {
+		if len(ch) == 3 {
+			break
+		}
+		time.Sleep(100 * time.Microsecond)
 	}
 
-	r, err = BaiduIP2Region(ip)
-	if err == nil {
-		return r
-	}
-
-	r, err = TaobaoIP2Region(ip)
-	if err == nil {
-		return r
-	}
-	return err.Error()
+	return fmt.Sprintf("[%s];[%s];[%s]", <-ch, <-ch, <-ch)
 }

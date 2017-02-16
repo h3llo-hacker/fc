@@ -10,14 +10,13 @@ import (
 	"github.com/docker/docker/cli"
 	"github.com/docker/docker/cli/command"
 	"github.com/docker/docker/cli/command/commands"
-	cliconfig "github.com/docker/docker/cli/config"
-	"github.com/docker/docker/cli/debug"
 	cliflags "github.com/docker/docker/cli/flags"
+	"github.com/docker/docker/cliconfig"
 	"github.com/docker/docker/dockerversion"
 	"github.com/docker/docker/pkg/term"
+	"github.com/docker/docker/utils"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"strings"
 )
 
 func newDockerCommand(dockerCli *command.DockerCli) *cobra.Command {
@@ -76,7 +75,7 @@ func newDockerCommand(dockerCli *command.DockerCli) *cobra.Command {
 
 	flags = cmd.Flags()
 	flags.BoolVarP(&opts.Version, "version", "v", false, "Print version information and quit")
-	flags.StringVar(&opts.ConfigDir, "config", cliconfig.Dir(), "Location of client config files")
+	flags.StringVar(&opts.ConfigDir, "config", cliconfig.ConfigDir(), "Location of client config files")
 	opts.Common.InstallFlags(flags)
 
 	cmd.SetOutput(dockerCli.Out())
@@ -127,11 +126,11 @@ func dockerPreRun(opts *cliflags.ClientOptions) {
 	cliflags.SetLogLevel(opts.Common.LogLevel)
 
 	if opts.ConfigDir != "" {
-		cliconfig.SetDir(opts.ConfigDir)
+		cliconfig.SetConfigDir(opts.ConfigDir)
 	}
 
 	if opts.Common.Debug {
-		debug.Enable()
+		utils.EnableDebug()
 	}
 }
 
@@ -145,7 +144,7 @@ func hideUnsupportedFeatures(cmd *cobra.Command, clientVersion string, hasExperi
 		}
 
 		// hide flags not supported by the server
-		if !isFlagSupported(f, clientVersion) {
+		if flagVersion, ok := f.Annotations["version"]; ok && len(flagVersion) == 1 && versions.LessThan(clientVersion, flagVersion[0]) {
 			f.Hidden = true
 		}
 
@@ -169,44 +168,13 @@ func hideUnsupportedFeatures(cmd *cobra.Command, clientVersion string, hasExperi
 func isSupported(cmd *cobra.Command, clientVersion string, hasExperimental bool) error {
 	if !hasExperimental {
 		if _, ok := cmd.Tags["experimental"]; ok {
-			return errors.New("only supported on a Docker daemon with experimental features enabled")
+			return errors.New("only supported with experimental daemon")
 		}
 	}
 
 	if cmdVersion, ok := cmd.Tags["version"]; ok && versions.LessThan(clientVersion, cmdVersion) {
-		return fmt.Errorf("requires API version %s, but the Docker daemon API version is %s", cmdVersion, clientVersion)
-	}
-
-	errs := []string{}
-
-	cmd.Flags().VisitAll(func(f *pflag.Flag) {
-		if f.Changed {
-			if !isFlagSupported(f, clientVersion) {
-				errs = append(errs, fmt.Sprintf("\"--%s\" requires API version %s, but the Docker daemon API version is %s", f.Name, getFlagVersion(f), clientVersion))
-				return
-			}
-			if _, ok := f.Annotations["experimental"]; ok && !hasExperimental {
-				errs = append(errs, fmt.Sprintf("\"--%s\" is only supported on a Docker daemon with experimental features enabled", f.Name))
-			}
-		}
-	})
-	if len(errs) > 0 {
-		return errors.New(strings.Join(errs, "\n"))
+		return fmt.Errorf("only supported with daemon version >= %s", cmdVersion)
 	}
 
 	return nil
-}
-
-func getFlagVersion(f *pflag.Flag) string {
-	if flagVersion, ok := f.Annotations["version"]; ok && len(flagVersion) == 1 {
-		return flagVersion[0]
-	}
-	return ""
-}
-
-func isFlagSupported(f *pflag.Flag, clientVersion string) bool {
-	if v := getFlagVersion(f); v != "" {
-		return versions.GreaterThanOrEqualTo(clientVersion, v)
-	}
-	return true
 }

@@ -164,10 +164,6 @@ func (daemon *Daemon) containerStart(container *container.Container, checkpoint 
 		checkpointDir = container.CheckpointDir()
 	}
 
-	if daemon.saveApparmorConfig(container); err != nil {
-		return err
-	}
-
 	if err := daemon.containerd.Create(container.ID, checkpoint, checkpointDir, *spec, container.InitializeStdio, createOptions...); err != nil {
 		errDesc := grpc.ErrorDesc(err)
 		contains := func(s1, s2 string) bool {

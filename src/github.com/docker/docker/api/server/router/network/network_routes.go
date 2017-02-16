@@ -10,20 +10,8 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/network"
-	"github.com/docker/docker/api/types/versions"
 	"github.com/docker/libnetwork"
 	"github.com/docker/libnetwork/networkdb"
-)
-
-var (
-	// acceptedNetworkFilters is a list of acceptable filters
-	acceptedNetworkFilters = map[string]bool{
-		"driver": true,
-		"type":   true,
-		"name":   true,
-		"id":     true,
-		"label":  true,
-	}
 )
 
 func (n *networkRouter) getNetworksList(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) error {
@@ -37,13 +25,9 @@ func (n *networkRouter) getNetworksList(ctx context.Context, w http.ResponseWrit
 		return err
 	}
 
-	if err := netFilters.Validate(acceptedNetworkFilters); err != nil {
-		return err
-	}
-
 	list := []types.NetworkResource{}
 
-	if nr, err := n.cluster.GetNetworks(); err == nil {
+	if nr, err := n.clusterProvider.GetNetworks(); err == nil {
 		list = append(list, nr...)
 	}
 
@@ -56,18 +40,7 @@ SKIP:
 				continue SKIP
 			}
 		}
-
-		var nr *types.NetworkResource
-		// Versions < 1.26 fetches all the containers attached to a network
-		// in a network list api call. It is a heavy weight operation when
-		// run across all the networks. Starting API version 1.26, this detailed
-		// info is available for network specific GET API (equivalent to inspect)
-		if versions.LessThan(httputils.VersionFromContext(ctx), "1.26") {
-			nr = n.buildDetailedNetworkResources(nw)
-		} else {
-			nr = n.buildNetworkResource(nw)
-		}
-		list = append(list, *nr)
+		list = append(list, *n.buildNetworkResource(nw))
 	}
 
 	list, err = filterNetworks(list, netFilters)
@@ -84,12 +57,12 @@ func (n *networkRouter) getNetwork(ctx context.Context, w http.ResponseWriter, r
 
 	nw, err := n.backend.FindNetwork(vars["id"])
 	if err != nil {
-		if nr, err := n.cluster.GetNetwork(vars["id"]); err == nil {
+		if nr, err := n.clusterProvider.GetNetwork(vars["id"]); err == nil {
 			return httputils.WriteJSON(w, http.StatusOK, nr)
 		}
 		return err
 	}
-	return httputils.WriteJSON(w, http.StatusOK, n.buildDetailedNetworkResources(nw))
+	return httputils.WriteJSON(w, http.StatusOK, n.buildNetworkResource(nw))
 }
 
 func (n *networkRouter) postNetworkCreate(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) error {
@@ -107,7 +80,7 @@ func (n *networkRouter) postNetworkCreate(ctx context.Context, w http.ResponseWr
 		return err
 	}
 
-	if nws, err := n.cluster.GetNetworksByName(create.Name); err == nil && len(nws) > 0 {
+	if nws, err := n.clusterProvider.GetNetworksByName(create.Name); err == nil && len(nws) > 0 {
 		return libnetwork.NetworkNameError(create.Name)
 	}
 
@@ -116,7 +89,7 @@ func (n *networkRouter) postNetworkCreate(ctx context.Context, w http.ResponseWr
 		if _, ok := err.(libnetwork.ManagerRedirectError); !ok {
 			return err
 		}
-		id, err := n.cluster.CreateNetwork(create)
+		id, err := n.clusterProvider.CreateNetwork(create)
 		if err != nil {
 			return err
 		}
@@ -164,8 +137,8 @@ func (n *networkRouter) deleteNetwork(ctx context.Context, w http.ResponseWriter
 	if err := httputils.ParseForm(r); err != nil {
 		return err
 	}
-	if _, err := n.cluster.GetNetwork(vars["id"]); err == nil {
-		if err = n.cluster.RemoveNetwork(vars["id"]); err != nil {
+	if _, err := n.clusterProvider.GetNetwork(vars["id"]); err == nil {
+		if err = n.clusterProvider.RemoveNetwork(vars["id"]); err != nil {
 			return err
 		}
 		w.WriteHeader(http.StatusNoContent)
@@ -189,8 +162,8 @@ func (n *networkRouter) buildNetworkResource(nw libnetwork.Network) *types.Netwo
 	r.ID = nw.ID()
 	r.Created = info.Created()
 	r.Scope = info.Scope()
-	if n.cluster.IsManager() {
-		if _, err := n.cluster.GetNetwork(nw.ID()); err == nil {
+	if n.clusterProvider.IsManager() {
+		if _, err := n.clusterProvider.GetNetwork(nw.ID()); err == nil {
 			r.Scope = "swarm"
 		}
 	} else if info.Dynamic() {
@@ -210,15 +183,6 @@ func (n *networkRouter) buildNetworkResource(nw libnetwork.Network) *types.Netwo
 		r.Peers = buildPeerInfoResources(peers)
 	}
 
-	return r
-}
-
-func (n *networkRouter) buildDetailedNetworkResources(nw libnetwork.Network) *types.NetworkResource {
-	if nw == nil {
-		return &types.NetworkResource{}
-	}
-
-	r := n.buildNetworkResource(nw)
 	epl := nw.Endpoints()
 	for _, e := range epl {
 		ei := e.Info()
@@ -295,6 +259,9 @@ func buildIpamResources(r *types.NetworkResource, nwInfo libnetwork.NetworkInfo)
 
 	if !hasIpv6Conf {
 		for _, ip6Info := range ipv6Info {
+			if ip6Info.IPAMData.Pool == nil {
+				continue
+			}
 			iData := network.IPAMConfig{}
 			iData.Subnet = ip6Info.IPAMData.Pool.String()
 			iData.Gateway = ip6Info.IPAMData.Gateway.String()
@@ -333,12 +300,7 @@ func (n *networkRouter) postNetworksPrune(ctx context.Context, w http.ResponseWr
 		return err
 	}
 
-	pruneFilters, err := filters.FromParam(r.Form.Get("filters"))
-	if err != nil {
-		return err
-	}
-
-	pruneReport, err := n.backend.NetworksPrune(pruneFilters)
+	pruneReport, err := n.backend.NetworksPrune(filters.Args{})
 	if err != nil {
 		return err
 	}

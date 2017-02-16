@@ -18,7 +18,6 @@ import (
 	"github.com/docker/swarmkit/manager/state/store"
 	"github.com/docker/swarmkit/protobuf/ptypes"
 	"github.com/docker/swarmkit/watch"
-	gogotypes "github.com/gogo/protobuf/types"
 )
 
 const defaultMonitor = 30 * time.Second
@@ -187,7 +186,7 @@ func (u *Updater) Run(ctx context.Context, slots []orchestrator.Slot) {
 
 		if service.Spec.Update.Monitor != nil {
 			var err error
-			monitoringPeriod, err = gogotypes.DurationFromProto(service.Spec.Update.Monitor)
+			monitoringPeriod, err = ptypes.Duration(service.Spec.Update.Monitor)
 			if err != nil {
 				monitoringPeriod = defaultMonitor
 			}
@@ -345,9 +344,14 @@ func (u *Updater) worker(ctx context.Context, queue <-chan orchestrator.Slot) {
 			}
 		}
 
-		if u.newService.Spec.Update != nil && u.newService.Spec.Update.Delay != 0 {
+		if u.newService.Spec.Update != nil && (u.newService.Spec.Update.Delay.Seconds != 0 || u.newService.Spec.Update.Delay.Nanos != 0) {
+			delay, err := ptypes.Duration(&u.newService.Spec.Update.Delay)
+			if err != nil {
+				log.G(ctx).WithError(err).Error("invalid update delay")
+				continue
+			}
 			select {
-			case <-time.After(u.newService.Spec.Update.Delay):
+			case <-time.After(delay):
 			case <-u.stopChan:
 				return
 			}
@@ -402,11 +406,7 @@ func (u *Updater) updateTask(ctx context.Context, slot orchestrator.Slot, update
 	}
 
 	if delayStartCh != nil {
-		select {
-		case <-delayStartCh:
-		case <-u.stopChan:
-			return nil
-		}
+		<-delayStartCh
 	}
 
 	// Wait for the new task to come up.
@@ -456,11 +456,7 @@ func (u *Updater) useExistingTask(ctx context.Context, slot orchestrator.Slot, e
 		}
 
 		if delayStartCh != nil {
-			select {
-			case <-delayStartCh:
-			case <-u.stopChan:
-				return nil
-			}
+			<-delayStartCh
 		}
 	}
 

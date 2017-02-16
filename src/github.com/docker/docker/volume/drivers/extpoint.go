@@ -146,7 +146,7 @@ func GetDriver(name string) (volume.Driver, error) {
 	if name == "" {
 		name = volume.DefaultDriverName
 	}
-	return lookup(name, getter.Lookup)
+	return lookup(name, getter.LOOKUP)
 }
 
 // CreateDriver returns a volume driver by its name and increments RefCount.
@@ -155,7 +155,7 @@ func CreateDriver(name string) (volume.Driver, error) {
 	if name == "" {
 		name = volume.DefaultDriverName
 	}
-	return lookup(name, getter.Acquire)
+	return lookup(name, getter.ACQUIRE)
 }
 
 // RemoveDriver returns a volume driver by its name and decrements RefCount..
@@ -164,7 +164,7 @@ func RemoveDriver(name string) (volume.Driver, error) {
 	if name == "" {
 		name = volume.DefaultDriverName
 	}
-	return lookup(name, getter.Release)
+	return lookup(name, getter.RELEASE)
 }
 
 // GetDriverList returns list of volume drivers registered.
@@ -200,12 +200,12 @@ func GetAllDrivers() ([]volume.Driver, error) {
 
 	for _, p := range plugins {
 		name := p.Name()
-
-		if _, ok := drivers.extensions[name]; ok {
+		ext, ok := drivers.extensions[name]
+		if ok {
 			continue
 		}
 
-		ext := NewVolumeDriver(name, p.BasePath(), p.Client())
+		ext = NewVolumeDriver(name, p.BasePath(), p.Client())
 		if p.IsV1() {
 			drivers.extensions[name] = ext
 		}

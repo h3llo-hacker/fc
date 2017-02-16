@@ -12,10 +12,10 @@ import (
 	"github.com/docker/docker/api"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/versions"
-	cliconfig "github.com/docker/docker/cli/config"
-	"github.com/docker/docker/cli/config/configfile"
-	"github.com/docker/docker/cli/config/credentials"
 	cliflags "github.com/docker/docker/cli/flags"
+	"github.com/docker/docker/cliconfig"
+	"github.com/docker/docker/cliconfig/configfile"
+	"github.com/docker/docker/cliconfig/credentials"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/dockerversion"
 	dopts "github.com/docker/docker/opts"
@@ -32,15 +32,7 @@ type Streams interface {
 	Err() io.Writer
 }
 
-// Cli represents the docker command line client.
-type Cli interface {
-	Client() client.APIClient
-	Out() *OutStream
-	Err() io.Writer
-	In() *InStream
-}
-
-// DockerCli is an instance the docker command line client.
+// DockerCli represents the docker command line client.
 // Instances of the client can be returned from NewDockerCli.
 type DockerCli struct {
 	configFile      *configfile.ConfigFile
@@ -158,7 +150,7 @@ func (cli *DockerCli) Initialize(opts *cliflags.ClientOptions) error {
 	cli.defaultVersion = cli.client.ClientVersion()
 
 	if opts.Common.TrustKey == "" {
-		cli.keyFile = filepath.Join(cliconfig.Dir(), cliflags.DefaultTrustKeyFile)
+		cli.keyFile = filepath.Join(cliconfig.ConfigDir(), cliflags.DefaultTrustKeyFile)
 	} else {
 		cli.keyFile = opts.Common.TrustKey
 	}
@@ -187,7 +179,7 @@ func NewDockerCli(in io.ReadCloser, out, err io.Writer) *DockerCli {
 // LoadDefaultConfigFile attempts to load the default config file and returns
 // an initialized ConfigFile struct if none is found.
 func LoadDefaultConfigFile(err io.Writer) *configfile.ConfigFile {
-	configFile, e := cliconfig.Load(cliconfig.Dir())
+	configFile, e := cliconfig.Load(cliconfig.ConfigDir())
 	if e != nil {
 		fmt.Fprintf(err, "WARNING: Error loading config file:%v\n", e)
 	}

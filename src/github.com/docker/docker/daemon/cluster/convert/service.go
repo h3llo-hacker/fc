@@ -7,7 +7,7 @@ import (
 	types "github.com/docker/docker/api/types/swarm"
 	"github.com/docker/docker/pkg/namesgenerator"
 	swarmapi "github.com/docker/swarmkit/api"
-	gogotypes "github.com/gogo/protobuf/types"
+	"github.com/docker/swarmkit/protobuf/ptypes"
 )
 
 // ServiceFromGRPC converts a grpc Service to a Service.
@@ -22,12 +22,12 @@ func ServiceFromGRPC(s swarmapi.Service) types.Service {
 
 	// Meta
 	service.Version.Index = s.Meta.Version.Index
-	service.CreatedAt, _ = gogotypes.TimestampFromProto(s.Meta.CreatedAt)
-	service.UpdatedAt, _ = gogotypes.TimestampFromProto(s.Meta.UpdatedAt)
+	service.CreatedAt, _ = ptypes.Timestamp(s.Meta.CreatedAt)
+	service.UpdatedAt, _ = ptypes.Timestamp(s.Meta.UpdatedAt)
 
 	// UpdateStatus
+	service.UpdateStatus = types.UpdateStatus{}
 	if s.UpdateStatus != nil {
-		service.UpdateStatus = &types.UpdateStatus{}
 		switch s.UpdateStatus.State {
 		case swarmapi.UpdateStatus_UPDATING:
 			service.UpdateStatus.State = types.UpdateStateUpdating
@@ -37,16 +37,8 @@ func ServiceFromGRPC(s swarmapi.Service) types.Service {
 			service.UpdateStatus.State = types.UpdateStateCompleted
 		}
 
-		startedAt, _ := gogotypes.TimestampFromProto(s.UpdateStatus.StartedAt)
-		if !startedAt.IsZero() {
-			service.UpdateStatus.StartedAt = &startedAt
-		}
-
-		completedAt, _ := gogotypes.TimestampFromProto(s.UpdateStatus.CompletedAt)
-		if !completedAt.IsZero() {
-			service.UpdateStatus.CompletedAt = &completedAt
-		}
-
+		service.UpdateStatus.StartedAt, _ = ptypes.Timestamp(s.UpdateStatus.StartedAt)
+		service.UpdateStatus.CompletedAt, _ = ptypes.Timestamp(s.UpdateStatus.CompletedAt)
 		service.UpdateStatus.Message = s.UpdateStatus.Message
 	}
 
@@ -96,9 +88,9 @@ func serviceSpecFromGRPC(spec *swarmapi.ServiceSpec) *types.ServiceSpec {
 			MaxFailureRatio: spec.Update.MaxFailureRatio,
 		}
 
-		convertedSpec.UpdateConfig.Delay = spec.Update.Delay
+		convertedSpec.UpdateConfig.Delay, _ = ptypes.Duration(&spec.Update.Delay)
 		if spec.Update.Monitor != nil {
-			convertedSpec.UpdateConfig.Monitor, _ = gogotypes.DurationFromProto(spec.Update.Monitor)
+			convertedSpec.UpdateConfig.Monitor, _ = ptypes.Duration(spec.Update.Monitor)
 		}
 
 		switch spec.Update.FailureAction {
@@ -183,12 +175,12 @@ func ServiceSpecToGRPC(s types.ServiceSpec) (swarmapi.ServiceSpec, error) {
 		}
 		spec.Update = &swarmapi.UpdateConfig{
 			Parallelism:     s.UpdateConfig.Parallelism,
-			Delay:           s.UpdateConfig.Delay,
+			Delay:           *ptypes.DurationProto(s.UpdateConfig.Delay),
 			FailureAction:   failureAction,
 			MaxFailureRatio: s.UpdateConfig.MaxFailureRatio,
 		}
 		if s.UpdateConfig.Monitor != 0 {
-			spec.Update.Monitor = gogotypes.DurationProto(s.UpdateConfig.Monitor)
+			spec.Update.Monitor = ptypes.DurationProto(s.UpdateConfig.Monitor)
 		}
 	}
 
@@ -295,11 +287,11 @@ func restartPolicyFromGRPC(p *swarmapi.RestartPolicy) *types.RestartPolicy {
 		}
 
 		if p.Delay != nil {
-			delay, _ := gogotypes.DurationFromProto(p.Delay)
+			delay, _ := ptypes.Duration(p.Delay)
 			rp.Delay = &delay
 		}
 		if p.Window != nil {
-			window, _ := gogotypes.DurationFromProto(p.Window)
+			window, _ := ptypes.Duration(p.Window)
 			rp.Window = &window
 		}
 
@@ -328,10 +320,10 @@ func restartPolicyToGRPC(p *types.RestartPolicy) (*swarmapi.RestartPolicy, error
 		}
 
 		if p.Delay != nil {
-			rp.Delay = gogotypes.DurationProto(*p.Delay)
+			rp.Delay = ptypes.DurationProto(*p.Delay)
 		}
 		if p.Window != nil {
-			rp.Window = gogotypes.DurationProto(*p.Window)
+			rp.Window = ptypes.DurationProto(*p.Window)
 		}
 		if p.MaxAttempts != nil {
 			rp.MaxAttempts = *p.MaxAttempts

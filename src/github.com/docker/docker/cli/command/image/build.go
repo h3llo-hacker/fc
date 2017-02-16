@@ -11,14 +11,15 @@ import (
 	"regexp"
 	"runtime"
 
-	"github.com/docker/distribution/reference"
+	"golang.org/x/net/context"
+
 	"github.com/docker/docker/api"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/builder"
 	"github.com/docker/docker/builder/dockerignore"
 	"github.com/docker/docker/cli"
 	"github.com/docker/docker/cli/command"
-	"github.com/docker/docker/cli/command/image/build"
 	"github.com/docker/docker/opts"
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/docker/pkg/fileutils"
@@ -26,10 +27,10 @@ import (
 	"github.com/docker/docker/pkg/progress"
 	"github.com/docker/docker/pkg/streamformatter"
 	"github.com/docker/docker/pkg/urlutil"
+	"github.com/docker/docker/reference"
 	runconfigopts "github.com/docker/docker/runconfig/opts"
-	units "github.com/docker/go-units"
+	"github.com/docker/go-units"
 	"github.com/spf13/cobra"
-	"golang.org/x/net/context"
 )
 
 type buildOptions struct {
@@ -38,10 +39,10 @@ type buildOptions struct {
 	tags           opts.ListOpts
 	labels         opts.ListOpts
 	buildArgs      opts.ListOpts
-	ulimits        *opts.UlimitOpt
+	ulimits        *runconfigopts.UlimitOpt
 	memory         string
 	memorySwap     string
-	shmSize        opts.MemBytes
+	shmSize        string
 	cpuShares      int64
 	cpuPeriod      int64
 	cpuQuota       int64
@@ -66,9 +67,9 @@ func NewBuildCommand(dockerCli *command.DockerCli) *cobra.Command {
 	ulimits := make(map[string]*units.Ulimit)
 	options := buildOptions{
 		tags:      opts.NewListOpts(validateTag),
-		buildArgs: opts.NewListOpts(opts.ValidateEnv),
-		ulimits:   opts.NewUlimitOpt(&ulimits),
-		labels:    opts.NewListOpts(opts.ValidateEnv),
+		buildArgs: opts.NewListOpts(runconfigopts.ValidateEnv),
+		ulimits:   runconfigopts.NewUlimitOpt(&ulimits),
+		labels:    opts.NewListOpts(runconfigopts.ValidateEnv),
 	}
 
 	cmd := &cobra.Command{
@@ -89,7 +90,7 @@ func NewBuildCommand(dockerCli *command.DockerCli) *cobra.Command {
 	flags.StringVarP(&options.dockerfileName, "file", "f", "", "Name of the Dockerfile (Default is 'PATH/Dockerfile')")
 	flags.StringVarP(&options.memory, "memory", "m", "", "Memory limit")
 	flags.StringVar(&options.memorySwap, "memory-swap", "", "Swap limit equal to memory plus swap: '-1' to enable unlimited swap")
-	flags.Var(&options.shmSize, "shm-size", "Size of /dev/shm")
+	flags.StringVar(&options.shmSize, "shm-size", "", "Size of /dev/shm, default value is 64MB")
 	flags.Int64VarP(&options.cpuShares, "cpu-shares", "c", 0, "CPU shares (relative weight)")
 	flags.Int64Var(&options.cpuPeriod, "cpu-period", 0, "Limit the CPU CFS (Completely Fair Scheduler) period")
 	flags.Int64Var(&options.cpuQuota, "cpu-quota", 0, "Limit the CPU CFS (Completely Fair Scheduler) quota")
@@ -107,9 +108,8 @@ func NewBuildCommand(dockerCli *command.DockerCli) *cobra.Command {
 	flags.BoolVar(&options.compress, "compress", false, "Compress the build context using gzip")
 	flags.StringSliceVar(&options.securityOpt, "security-opt", []string{}, "Security options")
 	flags.StringVar(&options.networkMode, "network", "default", "Set the networking mode for the RUN instructions during build")
-	flags.SetAnnotation("network", "version", []string{"1.25"})
 
-	command.AddTrustVerificationFlags(flags)
+	command.AddTrustedFlags(flags, true)
 
 	flags.BoolVar(&options.squash, "squash", false, "Squash newly built layers into a single new layer")
 	flags.SetAnnotation("squash", "experimental", nil)
@@ -156,15 +156,13 @@ func runBuild(dockerCli *command.DockerCli, options buildOptions) error {
 
 	switch {
 	case specifiedContext == "-":
-		buildCtx, relDockerfile, err = build.GetContextFromReader(dockerCli.In(), options.dockerfileName)
-	case isLocalDir(specifiedContext):
-		contextDir, relDockerfile, err = build.GetContextFromLocalDir(specifiedContext, options.dockerfileName)
+		buildCtx, relDockerfile, err = builder.GetContextFromReader(dockerCli.In(), options.dockerfileName)
 	case urlutil.IsGitURL(specifiedContext):
-		tempDir, relDockerfile, err = build.GetContextFromGitURL(specifiedContext, options.dockerfileName)
+		tempDir, relDockerfile, err = builder.GetContextFromGitURL(specifiedContext, options.dockerfileName)
 	case urlutil.IsURL(specifiedContext):
-		buildCtx, relDockerfile, err = build.GetContextFromURL(progBuff, specifiedContext, options.dockerfileName)
+		buildCtx, relDockerfile, err = builder.GetContextFromURL(progBuff, specifiedContext, options.dockerfileName)
 	default:
-		return fmt.Errorf("unable to prepare context: path %q not found", specifiedContext)
+		contextDir, relDockerfile, err = builder.GetContextFromLocalDir(specifiedContext, options.dockerfileName)
 	}
 
 	if err != nil {
@@ -200,7 +198,7 @@ func runBuild(dockerCli *command.DockerCli, options buildOptions) error {
 			}
 		}
 
-		if err := build.ValidateContextDirectory(contextDir, excludes); err != nil {
+		if err := builder.ValidateContextDirectory(contextDir, excludes); err != nil {
 			return fmt.Errorf("Error checking context: '%s'.", err)
 		}
 
@@ -274,6 +272,14 @@ func runBuild(dockerCli *command.DockerCli, options buildOptions) error {
 		}
 	}
 
+	var shmSize int64
+	if options.shmSize != "" {
+		shmSize, err = units.RAMInBytes(options.shmSize)
+		if err != nil {
+			return err
+		}
+	}
+
 	authConfigs, _ := dockerCli.GetAllCredentials()
 	buildOptions := types.ImageBuildOptions{
 		Memory:         memory,
@@ -292,7 +298,7 @@ func runBuild(dockerCli *command.DockerCli, options buildOptions) error {
 		CPUPeriod:      options.cpuPeriod,
 		CgroupParent:   options.cgroupParent,
 		Dockerfile:     relDockerfile,
-		ShmSize:        options.shmSize.Value(),
+		ShmSize:        shmSize,
 		Ulimits:        options.ulimits.GetList(),
 		BuildArgs:      runconfigopts.ConvertKVStringsToMapWithNil(options.buildArgs.GetAll()),
 		AuthConfigs:    authConfigs,
@@ -329,7 +335,7 @@ func runBuild(dockerCli *command.DockerCli, options buildOptions) error {
 	// Windows: show error message about modified file permissions if the
 	// daemon isn't running Windows.
 	if response.OSType != "windows" && runtime.GOOS == "windows" && !options.quiet {
-		fmt.Fprintln(dockerCli.Out(), `SECURITY WARNING: You are building a Docker image from Windows against a non-Windows Docker host. All files and directories added to build context will have '-rwxr-xr-x' permissions. It is recommended to double check and reset permissions for sensitive files and directories.`)
+		fmt.Fprintln(dockerCli.Err(), `SECURITY WARNING: You are building a Docker image from Windows against a non-Windows Docker host. All files and directories added to build context will have '-rwxr-xr-x' permissions. It is recommended to double check and reset permissions for sensitive files and directories.`)
 	}
 
 	// Everything worked so if -q was provided the output from the daemon
@@ -351,16 +357,11 @@ func runBuild(dockerCli *command.DockerCli, options buildOptions) error {
 	return nil
 }
 
-func isLocalDir(c string) bool {
-	_, err := os.Stat(c)
-	return err == nil
-}
-
 type translatorFunc func(context.Context, reference.NamedTagged) (reference.Canonical, error)
 
 // validateTag checks if the given image name can be resolved.
 func validateTag(rawRepo string) (string, error) {
-	_, err := reference.ParseNormalizedNamed(rawRepo)
+	_, err := reference.ParseNamed(rawRepo)
 	if err != nil {
 		return "", err
 	}
@@ -392,21 +393,18 @@ func rewriteDockerfileFrom(ctx context.Context, dockerfile io.Reader, translator
 		matches := dockerfileFromLinePattern.FindStringSubmatch(line)
 		if matches != nil && matches[1] != api.NoBaseImageSpecifier {
 			// Replace the line with a resolved "FROM repo@digest"
-			var ref reference.Named
-			ref, err = reference.ParseNormalizedNamed(matches[1])
+			ref, err := reference.ParseNamed(matches[1])
 			if err != nil {
 				return nil, nil, err
 			}
-			if reference.IsNameOnly(ref) {
-				ref = reference.EnsureTagged(ref)
-			}
+			ref = reference.WithDefaultTag(ref)
 			if ref, ok := ref.(reference.NamedTagged); ok && command.IsTrusted() {
 				trustedRef, err := translator(ctx, ref)
 				if err != nil {
 					return nil, nil, err
 				}
 
-				line = dockerfileFromLinePattern.ReplaceAllLiteralString(line, fmt.Sprintf("FROM %s", reference.FamiliarString(trustedRef)))
+				line = dockerfileFromLinePattern.ReplaceAllLiteralString(line, fmt.Sprintf("FROM %s", trustedRef.String()))
 				resolvedTags = append(resolvedTags, &resolvedTag{
 					digestRef: trustedRef,
 					tagRef:    ref,

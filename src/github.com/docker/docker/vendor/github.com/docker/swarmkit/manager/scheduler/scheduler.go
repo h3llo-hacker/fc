@@ -532,8 +532,7 @@ func (s *Scheduler) scheduleTaskGroup(ctx context.Context, taskGroup map[string]
 	}
 
 	nodes := s.nodeSet.findBestNodes(len(taskGroup), s.pipeline.Process, nodeLess)
-	nodeCount := len(nodes)
-	if nodeCount == 0 {
+	if len(nodes) == 0 {
 		s.noSuitableNode(ctx, taskGroup, schedulingDecisions)
 		return
 	}
@@ -541,7 +540,7 @@ func (s *Scheduler) scheduleTaskGroup(ctx context.Context, taskGroup map[string]
 	failedConstraints := make(map[int]bool) // key is index in nodes slice
 	nodeIter := 0
 	for taskID, t := range taskGroup {
-		n := &nodes[nodeIter%nodeCount]
+		n := &nodes[nodeIter%len(nodes)]
 
 		log.G(ctx).WithField("task.id", t.ID).Debugf("assigning to node %s", n.ID)
 		newT := *t
@@ -556,16 +555,16 @@ func (s *Scheduler) scheduleTaskGroup(ctx context.Context, taskGroup map[string]
 		nodeInfo, err := s.nodeSet.nodeInfo(n.ID)
 		if err == nil && nodeInfo.addTask(&newT) {
 			s.nodeSet.updateNode(nodeInfo)
-			nodes[nodeIter%nodeCount] = nodeInfo
+			nodes[nodeIter%len(nodes)] = nodeInfo
 		}
 
 		schedulingDecisions[taskID] = schedulingDecision{old: t, new: &newT}
 		delete(taskGroup, taskID)
 
-		if nodeIter+1 < nodeCount {
+		if nodeIter+1 < len(nodes) {
 			// First pass fills the nodes until they have the same
 			// number of tasks from this service.
-			nextNode := nodes[(nodeIter+1)%nodeCount]
+			nextNode := nodes[(nodeIter+1)%len(nodes)]
 			if nodeLess(&nextNode, &nodeInfo) {
 				nodeIter++
 			}
@@ -576,10 +575,10 @@ func (s *Scheduler) scheduleTaskGroup(ctx context.Context, taskGroup map[string]
 		}
 
 		origNodeIter := nodeIter
-		for failedConstraints[nodeIter%nodeCount] || !s.pipeline.Process(&nodes[nodeIter%nodeCount]) {
-			failedConstraints[nodeIter%nodeCount] = true
+		for failedConstraints[nodeIter%len(nodes)] || !s.pipeline.Process(&nodes[nodeIter%len(nodes)]) {
+			failedConstraints[nodeIter%len(nodes)] = true
 			nodeIter++
-			if nodeIter-origNodeIter == nodeCount {
+			if nodeIter-origNodeIter == len(nodes) {
 				// None of the nodes meet the constraints anymore.
 				s.noSuitableNode(ctx, taskGroup, schedulingDecisions)
 				return

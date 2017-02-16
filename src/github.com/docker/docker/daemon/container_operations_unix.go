@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/cloudflare/cfssl/log"
 	"github.com/docker/docker/container"
 	"github.com/docker/docker/daemon/links"
 	"github.com/docker/docker/pkg/idtools"
@@ -117,7 +118,7 @@ func (daemon *Daemon) setupIpcDirs(c *container.Container) error {
 				return err
 			}
 
-			shmSize := int64(daemon.configStore.ShmSize)
+			shmSize := container.DefaultSHMSize
 			if c.HostConfig.ShmSize != 0 {
 				shmSize = c.HostConfig.ShmSize
 			}
@@ -149,7 +150,7 @@ func (daemon *Daemon) setupSecretDir(c *container.Container) (setupErr error) {
 			_ = detachMounted(localMountPath)
 
 			if err := os.RemoveAll(localMountPath); err != nil {
-				logrus.Errorf("error cleaning up secret mount: %s", err)
+				log.Errorf("error cleaning up secret mount: %s", err)
 			}
 		}
 	}()

@@ -40,7 +40,7 @@ var DeprecatedProperties = map[string]string{
 // ForbiddenProperties that are not supported in this implementation of the
 // compose file.
 var ForbiddenProperties = map[string]string{
-	"extends":       "Support for `extends` is not implemented yet.",
+	"extends":       "Support for `extends` is not implemented yet. Use `docker-compose config` to generate a configuration with all `extends` options resolved, and deploy from that.",
 	"volume_driver": "Instead of setting the volume driver on the service, define a volume using the top-level `volumes` option and specify the driver there.",
 	"volumes_from":  "To share a volume between services, define it using the top-level `volumes` option and reference it from each service that shares it using the service-level `volumes` option.",
 	"cpu_quota":     "Set resource limits using deploy.resources",
@@ -81,32 +81,31 @@ type ServiceConfig struct {
 	CapAdd          []string `mapstructure:"cap_add"`
 	CapDrop         []string `mapstructure:"cap_drop"`
 	CgroupParent    string   `mapstructure:"cgroup_parent"`
-	Command         ShellCommand
+	Command         []string `compose:"shell_command"`
 	ContainerName   string   `mapstructure:"container_name"`
 	DependsOn       []string `mapstructure:"depends_on"`
 	Deploy          DeployConfig
 	Devices         []string
-	DNS             StringList
-	DNSSearch       StringList `mapstructure:"dns_search"`
-	DomainName      string     `mapstructure:"domainname"`
-	Entrypoint      ShellCommand
-	Environment     MappingWithEquals
-	EnvFile         StringList `mapstructure:"env_file"`
-	Expose          StringOrNumberList
-	ExternalLinks   []string         `mapstructure:"external_links"`
-	ExtraHosts      MappingWithColon `mapstructure:"extra_hosts"`
+	DNS             []string          `compose:"string_or_list"`
+	DNSSearch       []string          `mapstructure:"dns_search" compose:"string_or_list"`
+	DomainName      string            `mapstructure:"domainname"`
+	Entrypoint      []string          `compose:"shell_command"`
+	Environment     map[string]string `compose:"list_or_dict_equals"`
+	Expose          []string          `compose:"list_of_strings_or_numbers"`
+	ExternalLinks   []string          `mapstructure:"external_links"`
+	ExtraHosts      map[string]string `mapstructure:"extra_hosts" compose:"list_or_dict_colon"`
 	Hostname        string
 	HealthCheck     *HealthCheckConfig
 	Image           string
 	Ipc             string
-	Labels          MappingWithEquals
+	Labels          map[string]string `compose:"list_or_dict_equals"`
 	Links           []string
 	Logging         *LoggingConfig
-	MacAddress      string `mapstructure:"mac_address"`
-	NetworkMode     string `mapstructure:"network_mode"`
-	Networks        map[string]*ServiceNetworkConfig
+	MacAddress      string                           `mapstructure:"mac_address"`
+	NetworkMode     string                           `mapstructure:"network_mode"`
+	Networks        map[string]*ServiceNetworkConfig `compose:"list_or_struct_map"`
 	Pid             string
-	Ports           StringOrNumberList
+	Ports           []string `compose:"list_of_strings_or_numbers"`
 	Privileged      bool
 	ReadOnly        bool `mapstructure:"read_only"`
 	Restart         string
@@ -115,31 +114,13 @@ type ServiceConfig struct {
 	StdinOpen       bool           `mapstructure:"stdin_open"`
 	StopGracePeriod *time.Duration `mapstructure:"stop_grace_period"`
 	StopSignal      string         `mapstructure:"stop_signal"`
-	Tmpfs           StringList
-	Tty             bool `mapstructure:"tty"`
+	Tmpfs           []string       `compose:"string_or_list"`
+	Tty             bool           `mapstructure:"tty"`
 	Ulimits         map[string]*UlimitsConfig
 	User            string
 	Volumes         []string
 	WorkingDir      string `mapstructure:"working_dir"`
 }
-
-// ShellCommand is a string or list of string args
-type ShellCommand []string
-
-// StringList is a type for fields that can be a string or list of strings
-type StringList []string
-
-// StringOrNumberList is a type for fields that can be a list of strings or
-// numbers
-type StringOrNumberList []string
-
-// MappingWithEquals is a mapping type that can be converted from a list of
-// key=value strings
-type MappingWithEquals map[string]string
-
-// MappingWithColon is a mapping type that can be converted from alist of
-// 'key: value' strings
-type MappingWithColon map[string]string
 
 // LoggingConfig the logging configuration for a service
 type LoggingConfig struct {
@@ -151,8 +132,8 @@ type LoggingConfig struct {
 type DeployConfig struct {
 	Mode          string
 	Replicas      *uint64
-	Labels        MappingWithEquals
-	UpdateConfig  *UpdateConfig `mapstructure:"update_config"`
+	Labels        map[string]string `compose:"list_or_dict_equals"`
+	UpdateConfig  *UpdateConfig     `mapstructure:"update_config"`
 	Resources     Resources
 	RestartPolicy *RestartPolicy `mapstructure:"restart_policy"`
 	Placement     Placement
@@ -160,15 +141,12 @@ type DeployConfig struct {
 
 // HealthCheckConfig the healthcheck configuration for a service
 type HealthCheckConfig struct {
-	Test     HealthCheckTest
+	Test     []string `compose:"healthcheck"`
 	Timeout  string
 	Interval string
 	Retries  *uint64
 	Disable  bool
 }
-
-// HealthCheckTest is the command run to test the health of a service
-type HealthCheckTest []string
 
 // UpdateConfig the service update configuration
 type UpdateConfig struct {
@@ -238,7 +216,7 @@ type NetworkConfig struct {
 	Ipam       IPAMConfig
 	External   External
 	Internal   bool
-	Labels     MappingWithEquals
+	Labels     map[string]string `compose:"list_or_dict_equals"`
 }
 
 // IPAMConfig for a network
@@ -257,7 +235,7 @@ type VolumeConfig struct {
 	Driver     string
 	DriverOpts map[string]string `mapstructure:"driver_opts"`
 	External   External
-	Labels     MappingWithEquals
+	Labels     map[string]string `compose:"list_or_dict_equals"`
 }
 
 // External identifies a Volume or Network as a reference to a resource that is
@@ -271,5 +249,5 @@ type External struct {
 type SecretConfig struct {
 	File     string
 	External External
-	Labels   MappingWithEquals
+	Labels   map[string]string `compose:"list_or_dict_equals"`
 }

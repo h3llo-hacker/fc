@@ -34,6 +34,7 @@ func Router(router *gin.Engine) {
 	// User
 	userGroup := router.Group("/user")
 	{
+		userGroup.POST("/login", userLogin)
 		userGroup.POST("/create", userCreate)
 		userGroup.DELETE("/delete", userDelete)
 		userGroup.POST("/update/:userURL", userUpdate)

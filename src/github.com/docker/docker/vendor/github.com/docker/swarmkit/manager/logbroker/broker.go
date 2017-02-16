@@ -173,7 +173,7 @@ func (lb *LogBroker) watchSubscriptions(nodeID string) ([]*subscription, chan ev
 	}))
 
 	// Grab current subscriptions.
-	var subscriptions []*subscription
+	subscriptions := make([]*subscription, 0, len(lb.registeredSubscriptions))
 	for _, s := range lb.registeredSubscriptions {
 		if s.Contains(nodeID) {
 			subscriptions = append(subscriptions, s)

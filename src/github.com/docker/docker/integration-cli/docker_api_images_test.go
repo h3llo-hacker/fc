@@ -7,9 +7,7 @@ import (
 	"strings"
 
 	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/image"
-	"github.com/docker/docker/integration-cli/checker"
-	"github.com/docker/docker/integration-cli/request"
+	"github.com/docker/docker/pkg/integration/checker"
 	"github.com/go-check/check"
 )
 
@@ -24,7 +22,7 @@ func (s *DockerSuite) TestAPIImagesFilter(c *check.C) {
 	getImages := func(filter string) []image {
 		v := url.Values{}
 		v.Set("filter", filter)
-		status, b, err := request.SockRequest("GET", "/images/json?"+v.Encode(), nil, daemonHost())
+		status, b, err := sockRequest("GET", "/images/json?"+v.Encode(), nil)
 		c.Assert(err, checker.IsNil)
 		c.Assert(status, checker.Equals, http.StatusOK)
 
@@ -53,17 +51,18 @@ func (s *DockerSuite) TestAPIImagesSaveAndLoad(c *check.C) {
 	// TODO Windows to Windows CI: Investigate further why this test fails.
 	testRequires(c, Network)
 	testRequires(c, DaemonIsLinux)
-	buildImageSuccessfully(c, "saveandload", withDockerfile("FROM busybox\nENV FOO bar"))
-	id := getIDByName(c, "saveandload")
+	out, err := buildImage("saveandload", "FROM busybox\nENV FOO bar", false)
+	c.Assert(err, checker.IsNil)
+	id := strings.TrimSpace(out)
 
-	res, body, err := request.SockRequestRaw("GET", "/images/"+id+"/get", nil, "", daemonHost())
+	res, body, err := sockRequestRaw("GET", "/images/"+id+"/get", nil, "")
 	c.Assert(err, checker.IsNil)
 	defer body.Close()
 	c.Assert(res.StatusCode, checker.Equals, http.StatusOK)
 
 	dockerCmd(c, "rmi", id)
 
-	res, loadBody, err := request.SockRequestRaw("POST", "/images/load", body, "application/x-tar", daemonHost())
+	res, loadBody, err := sockRequestRaw("POST", "/images/load", body, "application/x-tar")
 	c.Assert(err, checker.IsNil)
 	defer loadBody.Close()
 	c.Assert(res.StatusCode, checker.Equals, http.StatusOK)
@@ -73,41 +72,44 @@ func (s *DockerSuite) TestAPIImagesSaveAndLoad(c *check.C) {
 }
 
 func (s *DockerSuite) TestAPIImagesDelete(c *check.C) {
-	if testEnv.DaemonPlatform() != "windows" {
+	if daemonPlatform != "windows" {
 		testRequires(c, Network)
 	}
 	name := "test-api-images-delete"
-	buildImageSuccessfully(c, name, withDockerfile("FROM busybox\nENV FOO bar"))
-	id := getIDByName(c, name)
+	out, err := buildImage(name, "FROM busybox\nENV FOO bar", false)
+	c.Assert(err, checker.IsNil)
+	id := strings.TrimSpace(out)
 
 	dockerCmd(c, "tag", name, "test:tag1")
 
-	status, _, err := request.SockRequest("DELETE", "/images/"+id, nil, daemonHost())
+	status, _, err := sockRequest("DELETE", "/images/"+id, nil)
 	c.Assert(err, checker.IsNil)
 	c.Assert(status, checker.Equals, http.StatusConflict)
 
-	status, _, err = request.SockRequest("DELETE", "/images/test:noexist", nil, daemonHost())
+	status, _, err = sockRequest("DELETE", "/images/test:noexist", nil)
 	c.Assert(err, checker.IsNil)
 	c.Assert(status, checker.Equals, http.StatusNotFound) //Status Codes:404 – no such image
 
-	status, _, err = request.SockRequest("DELETE", "/images/test:tag1", nil, daemonHost())
+	status, _, err = sockRequest("DELETE", "/images/test:tag1", nil)
 	c.Assert(err, checker.IsNil)
 	c.Assert(status, checker.Equals, http.StatusOK)
 }
 
 func (s *DockerSuite) TestAPIImagesHistory(c *check.C) {
-	if testEnv.DaemonPlatform() != "windows" {
+	if daemonPlatform != "windows" {
 		testRequires(c, Network)
 	}
 	name := "test-api-images-history"
-	buildImageSuccessfully(c, name, withDockerfile("FROM busybox\nENV FOO bar"))
-	id := getIDByName(c, name)
+	out, err := buildImage(name, "FROM busybox\nENV FOO bar", false)
+	c.Assert(err, checker.IsNil)
 
-	status, body, err := request.SockRequest("GET", "/images/"+id+"/history", nil, daemonHost())
+	id := strings.TrimSpace(out)
+
+	status, body, err := sockRequest("GET", "/images/"+id+"/history", nil)
 	c.Assert(err, checker.IsNil)
 	c.Assert(status, checker.Equals, http.StatusOK)
 
-	var historydata []image.HistoryResponseItem
+	var historydata []types.ImageHistory
 	err = json.Unmarshal(body, &historydata)
 	c.Assert(err, checker.IsNil, check.Commentf("Error on unmarshal"))
 
@@ -119,7 +121,7 @@ func (s *DockerSuite) TestAPIImagesHistory(c *check.C) {
 func (s *DockerSuite) TestAPIImagesSearchJSONContentType(c *check.C) {
 	testRequires(c, Network)
 
-	res, b, err := request.SockRequestRaw("GET", "/images/search?term=test", nil, "application/json", daemonHost())
+	res, b, err := sockRequestRaw("GET", "/images/search?term=test", nil, "application/json")
 	c.Assert(err, check.IsNil)
 	b.Close()
 	c.Assert(res.StatusCode, checker.Equals, http.StatusOK)
@@ -129,7 +131,7 @@ func (s *DockerSuite) TestAPIImagesSearchJSONContentType(c *check.C) {
 // Test case for 30027: image size reported as -1 in v1.12 client against v1.13 daemon.
 // This test checks to make sure both v1.12 and v1.13 client against v1.13 daemon get correct `Size` after the fix.
 func (s *DockerSuite) TestAPIImagesSizeCompatibility(c *check.C) {
-	status, b, err := request.SockRequest("GET", "/images/json", nil, daemonHost())
+	status, b, err := sockRequest("GET", "/images/json", nil)
 	c.Assert(err, checker.IsNil)
 	c.Assert(status, checker.Equals, http.StatusOK)
 	var images []types.ImageSummary
@@ -150,7 +152,7 @@ func (s *DockerSuite) TestAPIImagesSizeCompatibility(c *check.C) {
 		VirtualSize int64
 		Labels      map[string]string
 	}
-	status, b, err = request.SockRequest("GET", "/v1.24/images/json", nil, daemonHost())
+	status, b, err = sockRequest("GET", "/v1.24/images/json", nil)
 	c.Assert(err, checker.IsNil)
 	c.Assert(status, checker.Equals, http.StatusOK)
 	var v124Images []v124Image

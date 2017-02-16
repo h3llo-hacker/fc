@@ -8,8 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/docker/docker/integration-cli/checker"
-	"github.com/docker/docker/integration-cli/request"
+	"github.com/docker/docker/pkg/integration/checker"
 	"github.com/go-check/check"
 )
 
@@ -26,7 +25,7 @@ func (s *DockerSuite) TestLogsAPIWithStdout(c *check.C) {
 	chLog := make(chan logOut)
 
 	go func() {
-		res, body, err := request.SockRequestRaw("GET", fmt.Sprintf("/containers/%s/logs?follow=1&stdout=1&timestamps=1", id), nil, "", daemonHost())
+		res, body, err := sockRequestRaw("GET", fmt.Sprintf("/containers/%s/logs?follow=1&stdout=1&timestamps=1", id), nil, "")
 		if err != nil {
 			chLog <- logOut{"", nil, err}
 			return
@@ -56,7 +55,7 @@ func (s *DockerSuite) TestLogsAPINoStdoutNorStderr(c *check.C) {
 	name := "logs_test"
 	dockerCmd(c, "run", "-d", "-t", "--name", name, "busybox", "/bin/sh")
 
-	status, body, err := request.SockRequest("GET", fmt.Sprintf("/containers/%s/logs", name), nil, daemonHost())
+	status, body, err := sockRequest("GET", fmt.Sprintf("/containers/%s/logs", name), nil)
 	c.Assert(status, checker.Equals, http.StatusBadRequest)
 	c.Assert(err, checker.IsNil)
 
@@ -70,7 +69,7 @@ func (s *DockerSuite) TestLogsAPIFollowEmptyOutput(c *check.C) {
 	t0 := time.Now()
 	dockerCmd(c, "run", "-d", "-t", "--name", name, "busybox", "sleep", "10")
 
-	_, body, err := request.SockRequestRaw("GET", fmt.Sprintf("/containers/%s/logs?follow=1&stdout=1&stderr=1&tail=all", name), bytes.NewBuffer(nil), "", daemonHost())
+	_, body, err := sockRequestRaw("GET", fmt.Sprintf("/containers/%s/logs?follow=1&stdout=1&stderr=1&tail=all", name), bytes.NewBuffer(nil), "")
 	t1 := time.Now()
 	c.Assert(err, checker.IsNil)
 	body.Close()
@@ -82,7 +81,7 @@ func (s *DockerSuite) TestLogsAPIFollowEmptyOutput(c *check.C) {
 
 func (s *DockerSuite) TestLogsAPIContainerNotFound(c *check.C) {
 	name := "nonExistentContainer"
-	resp, _, err := request.SockRequestRaw("GET", fmt.Sprintf("/containers/%s/logs?follow=1&stdout=1&stderr=1&tail=all", name), bytes.NewBuffer(nil), "", daemonHost())
+	resp, _, err := sockRequestRaw("GET", fmt.Sprintf("/containers/%s/logs?follow=1&stdout=1&stderr=1&tail=all", name), bytes.NewBuffer(nil), "")
 	c.Assert(err, checker.IsNil)
 	c.Assert(resp.StatusCode, checker.Equals, http.StatusNotFound)
 }

@@ -8,16 +8,16 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/docker/docker/integration-cli/checker"
-	icmd "github.com/docker/docker/pkg/testutil/cmd"
+	"github.com/docker/docker/pkg/integration/checker"
+	icmd "github.com/docker/docker/pkg/integration/cmd"
 	"github.com/go-check/check"
 )
 
 func (s *DockerSuite) TestVolumeCLICreate(c *check.C) {
 	dockerCmd(c, "volume", "create")
 
-	_, _, err := dockerCmdWithError("volume", "create", "-d", "nosuchdriver")
-	c.Assert(err, check.NotNil)
+	_, err := runCommand(exec.Command(dockerBinary, "volume", "create", "-d", "nosuchdriver"))
+	c.Assert(err, check.Not(check.IsNil))
 
 	// test using hidden --name option
 	out, _ := dockerCmd(c, "volume", "create", "--name=test")
@@ -184,6 +184,19 @@ func (s *DockerSuite) TestVolumeCLILsFilterDangling(c *check.C) {
 	c.Assert(out, check.Not(checker.Contains), "testnotinuse1\n", check.Commentf("expected volume 'testnotinuse1' in output"))
 	c.Assert(out, checker.Contains, "testisinuse1\n", check.Commentf("execpeted volume 'testisinuse1' in output"))
 	c.Assert(out, checker.Contains, "testisinuse2\n", check.Commentf("expected volume 'testisinuse2' in output"))
+
+	out, _ = dockerCmd(c, "volume", "ls", "--filter", "driver=invalidDriver")
+	outArr := strings.Split(strings.TrimSpace(out), "\n")
+	c.Assert(len(outArr), check.Equals, 1, check.Commentf("%s\n", out))
+
+	out, _ = dockerCmd(c, "volume", "ls", "--filter", "driver=local")
+	outArr = strings.Split(strings.TrimSpace(out), "\n")
+	c.Assert(len(outArr), check.Equals, 4, check.Commentf("\n%s", out))
+
+	out, _ = dockerCmd(c, "volume", "ls", "--filter", "driver=loc")
+	outArr = strings.Split(strings.TrimSpace(out), "\n")
+	c.Assert(len(outArr), check.Equals, 4, check.Commentf("\n%s", out))
+
 }
 
 func (s *DockerSuite) TestVolumeCLILsErrorWithInvalidFilterName(c *check.C) {
@@ -213,11 +226,11 @@ func (s *DockerSuite) TestVolumeCLIRm(c *check.C) {
 
 	volumeID := "testing"
 	dockerCmd(c, "run", "-v", volumeID+":"+prefix+"/foo", "--name=test", "busybox", "sh", "-c", "echo hello > /foo/bar")
-
-	icmd.RunCommand(dockerBinary, "volume", "rm", "testing").Assert(c, icmd.Expected{
-		ExitCode: 1,
-		Error:    "exit status 1",
-	})
+	out, _, err := runCommandWithOutput(exec.Command(dockerBinary, "volume", "rm", "testing"))
+	c.Assert(
+		err,
+		check.Not(check.IsNil),
+		check.Commentf("Should not be able to remove volume that is in use by a container\n%s", out))
 
 	out, _ = dockerCmd(c, "run", "--volumes-from=test", "--name=test2", "busybox", "sh", "-c", "cat /foo/bar")
 	c.Assert(strings.TrimSpace(out), check.Equals, "hello")
@@ -237,7 +250,6 @@ func (s *DockerSuite) TestVolumeCLIRm(c *check.C) {
 	)
 }
 
-// FIXME(vdemeester) should be a unit test in cli/command/volume package
 func (s *DockerSuite) TestVolumeCLINoArgs(c *check.C) {
 	out, _ := dockerCmd(c, "volume")
 	// no args should produce the cmd usage output
@@ -245,20 +257,15 @@ func (s *DockerSuite) TestVolumeCLINoArgs(c *check.C) {
 	c.Assert(out, checker.Contains, usage)
 
 	// invalid arg should error and show the command usage on stderr
-	icmd.RunCommand(dockerBinary, "volume", "somearg").Assert(c, icmd.Expected{
-		ExitCode: 1,
-		Error:    "exit status 1",
-		Err:      usage,
-	})
+	_, stderr, _, err := runCommandWithStdoutStderr(exec.Command(dockerBinary, "volume", "somearg"))
+	c.Assert(err, check.NotNil, check.Commentf(stderr))
+	c.Assert(stderr, checker.Contains, usage)
 
 	// invalid flag should error and show the flag error and cmd usage
-	result := icmd.RunCommand(dockerBinary, "volume", "--no-such-flag")
-	result.Assert(c, icmd.Expected{
-		ExitCode: 125,
-		Error:    "exit status 125",
-		Err:      usage,
-	})
-	c.Assert(result.Stderr(), checker.Contains, "unknown flag: --no-such-flag")
+	_, stderr, _, err = runCommandWithStdoutStderr(exec.Command(dockerBinary, "volume", "--no-such-flag"))
+	c.Assert(err, check.NotNil, check.Commentf(stderr))
+	c.Assert(stderr, checker.Contains, usage)
+	c.Assert(stderr, checker.Contains, "unknown flag: --no-such-flag")
 }
 
 func (s *DockerSuite) TestVolumeCLIInspectTmplError(c *check.C) {
@@ -289,7 +296,6 @@ func (s *DockerSuite) TestVolumeCLICreateWithOpts(c *check.C) {
 			c.Assert(info[4], checker.Equals, "tmpfs")
 			c.Assert(info[5], checker.Contains, "uid=1000")
 			c.Assert(info[5], checker.Contains, "size=1024k")
-			break
 		}
 	}
 	c.Assert(found, checker.Equals, true)
@@ -364,37 +370,6 @@ func (s *DockerSuite) TestVolumeCLILsFilterLabels(c *check.C) {
 	c.Assert(len(outArr), check.Equals, 1, check.Commentf("\n%s", out))
 }
 
-func (s *DockerSuite) TestVolumeCLILsFilterDrivers(c *check.C) {
-	// using default volume driver local to create volumes
-	testVol1 := "testvol-1"
-	out, _, err := dockerCmdWithError("volume", "create", testVol1)
-	c.Assert(err, check.IsNil)
-
-	testVol2 := "testvol-2"
-	out, _, err = dockerCmdWithError("volume", "create", testVol2)
-	c.Assert(err, check.IsNil)
-
-	// filter with driver=local
-	out, _ = dockerCmd(c, "volume", "ls", "--filter", "driver=local")
-	c.Assert(out, checker.Contains, "testvol-1\n", check.Commentf("expected volume 'testvol-1' in output"))
-	c.Assert(out, checker.Contains, "testvol-2\n", check.Commentf("expected volume 'testvol-2' in output"))
-
-	// filter with driver=invaliddriver
-	out, _ = dockerCmd(c, "volume", "ls", "--filter", "driver=invaliddriver")
-	outArr := strings.Split(strings.TrimSpace(out), "\n")
-	c.Assert(len(outArr), check.Equals, 1, check.Commentf("\n%s", out))
-
-	// filter with driver=loca
-	out, _ = dockerCmd(c, "volume", "ls", "--filter", "driver=loca")
-	outArr = strings.Split(strings.TrimSpace(out), "\n")
-	c.Assert(len(outArr), check.Equals, 1, check.Commentf("\n%s", out))
-
-	// filter with driver=
-	out, _ = dockerCmd(c, "volume", "ls", "--filter", "driver=")
-	outArr = strings.Split(strings.TrimSpace(out), "\n")
-	c.Assert(len(outArr), check.Equals, 1, check.Commentf("\n%s", out))
-}
-
 func (s *DockerSuite) TestVolumeCLIRmForceUsage(c *check.C) {
 	out, _ := dockerCmd(c, "volume", "create")
 	id := strings.TrimSpace(out)
@@ -419,7 +394,8 @@ func (s *DockerSuite) TestVolumeCLIRmForce(c *check.C) {
 	c.Assert(strings.TrimSpace(out), checker.Not(checker.Equals), "")
 	// Mountpoint is in the form of "/var/lib/docker/volumes/.../_data", removing `/_data`
 	path := strings.TrimSuffix(strings.TrimSpace(out), "/_data")
-	icmd.RunCommand("rm", "-rf", path).Assert(c, icmd.Success)
+	out, _, err := runCommandWithOutput(exec.Command("rm", "-rf", path))
+	c.Assert(err, check.IsNil)
 
 	dockerCmd(c, "volume", "rm", "-f", "test")
 	out, _ = dockerCmd(c, "volume", "ls")

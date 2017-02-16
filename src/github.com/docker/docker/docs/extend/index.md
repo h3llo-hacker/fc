@@ -46,8 +46,6 @@ operation, such as creating a volume.
 In the following example, you install the `sshfs` plugin, verify that it is
 enabled, and use it to create a volume.
 
-> **Note**: This example is intended for instructional purposes only. Once the volume is created, your SSH password to the remote host will be exposed as plaintext when inspecting the volume. You should delete the volume as soon as you are done with the example.
-
 1.  Install the `sshfs` plugin.
 
     ```bash
@@ -77,16 +75,13 @@ enabled, and use it to create a volume.
 
 3.  Create a volume using the plugin.
     This example mounts the `/remote` directory on host `1.2.3.4` into a
-    volume named `sshvolume`.   
-   
-    This volume can now be mounted into containers.
+    volume named `sshvolume`. This volume can now be mounted into containers.
 
     ```bash
     $ docker volume create \
       -d vieux/sshfs \
       --name sshvolume \
-      -o sshcmd=user@1.2.3.4:/remote \
-      -o password=$(cat file_containing_password_for_remote_host)
+      -o sshcmd=user@1.2.3.4:/remote
 
     sshvolume
     ```
@@ -102,17 +97,11 @@ enabled, and use it to create a volume.
 5.  Start a container that uses the volume `sshvolume`.
 
     ```bash
-    $ docker run --rm -v sshvolume:/data busybox ls /data
+    $ docker run -v sshvolume:/data busybox ls /data
 
     <content of /remote on machine 1.2.3.4>
     ```
 
-6.  Remove the volume `sshvolume`
-    ```bash
-    docker volume rm sshvolume
-    
-    sshvolume
-    ```
 To disable a plugin, use the `docker plugin disable` command. To completely
 remove it, use the `docker plugin remove` command. For other available
 commands and options, see the

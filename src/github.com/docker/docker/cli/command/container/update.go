@@ -1,9 +1,10 @@
 package container
 
 import (
-	"errors"
 	"fmt"
 	"strings"
+
+	"golang.org/x/net/context"
 
 	containertypes "github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/cli"
@@ -11,7 +12,6 @@ import (
 	runconfigopts "github.com/docker/docker/runconfig/opts"
 	"github.com/docker/go-units"
 	"github.com/spf13/cobra"
-	"golang.org/x/net/context"
 )
 
 type updateOptions struct {
@@ -54,9 +54,7 @@ func NewUpdateCommand(dockerCli *command.DockerCli) *cobra.Command {
 	flags.Int64Var(&opts.cpuPeriod, "cpu-period", 0, "Limit CPU CFS (Completely Fair Scheduler) period")
 	flags.Int64Var(&opts.cpuQuota, "cpu-quota", 0, "Limit CPU CFS (Completely Fair Scheduler) quota")
 	flags.Int64Var(&opts.cpuRealtimePeriod, "cpu-rt-period", 0, "Limit the CPU real-time period in microseconds")
-	flags.SetAnnotation("cpu-rt-period", "version", []string{"1.25"})
 	flags.Int64Var(&opts.cpuRealtimeRuntime, "cpu-rt-runtime", 0, "Limit the CPU real-time runtime in microseconds")
-	flags.SetAnnotation("cpu-rt-runtime", "version", []string{"1.25"})
 	flags.StringVar(&opts.cpusetCpus, "cpuset-cpus", "", "CPUs in which to allow execution (0-3, 0,1)")
 	flags.StringVar(&opts.cpusetMems, "cpuset-mems", "", "MEMs in which to allow execution (0-3, 0,1)")
 	flags.Int64VarP(&opts.cpuShares, "cpu-shares", "c", 0, "CPU shares (relative weight)")
@@ -73,7 +71,7 @@ func runUpdate(dockerCli *command.DockerCli, opts *updateOptions) error {
 	var err error
 
 	if opts.nFlag == 0 {
-		return errors.New("You must provide one or more flags when using this command.")
+		return fmt.Errorf("You must provide one or more flags when using this command.")
 	}
 
 	var memory int64
@@ -151,15 +149,15 @@ func runUpdate(dockerCli *command.DockerCli, opts *updateOptions) error {
 		if err != nil {
 			errs = append(errs, err.Error())
 		} else {
-			fmt.Fprintln(dockerCli.Out(), container)
+			fmt.Fprintf(dockerCli.Out(), "%s\n", container)
 		}
 		warns = append(warns, r.Warnings...)
 	}
 	if len(warns) > 0 {
-		fmt.Fprintln(dockerCli.Out(), strings.Join(warns, "\n"))
+		fmt.Fprintf(dockerCli.Out(), "%s", strings.Join(warns, "\n"))
 	}
 	if len(errs) > 0 {
-		return errors.New(strings.Join(errs, "\n"))
+		return fmt.Errorf("%s", strings.Join(errs, "\n"))
 	}
 	return nil
 }

@@ -1,7 +1,6 @@
 package reference
 
 import (
-	_ "crypto/sha256"
 	"testing"
 )
 

@@ -3,7 +3,6 @@ package daemon
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/Microsoft/hcsshim"
@@ -37,11 +36,6 @@ const (
 	windowsMaxCPUPercent = 100
 	windowsMinCPUCount   = 1
 )
-
-// Windows has no concept of an execution state directory. So use config.Root here.
-func getPluginExecRoot(root string) string {
-	return filepath.Join(root, "plugins")
-}
 
 func getBlkioWeightDevices(config *containertypes.HostConfig) ([]blkiodev.WeightDevice, error) {
 	return nil, nil
@@ -206,10 +200,13 @@ func verifyPlatformContainerSettings(daemon *Daemon, hostConfig *containertypes.
 
 	w, err := verifyContainerResources(&hostConfig.Resources, hyperv)
 	warnings = append(warnings, w...)
-	return warnings, err
+	if err != nil {
+		return warnings, err
+	}
+	return warnings, nil
 }
 
-// platformReload updates configuration with platform specific options
+// platformReload update configuration with platform specific options
 func (daemon *Daemon) platformReload(config *Config) map[string]string {
 	return map[string]string{}
 }
@@ -345,10 +342,8 @@ func (daemon *Daemon) initNetworkController(config *Config, activeSandboxes map[
 		name := v.Name
 
 		// If there is no nat network create one from the first NAT network
-		// encountered if it doesn't already exist
-		if !defaultNetworkExists &&
-			runconfig.DefaultDaemonNetworkMode() == containertypes.NetworkMode(strings.ToLower(v.Type)) &&
-			n == nil {
+		// encountered
+		if !defaultNetworkExists && runconfig.DefaultDaemonNetworkMode() == containertypes.NetworkMode(strings.ToLower(v.Type)) {
 			name = runconfig.DefaultDaemonNetworkMode().NetworkName()
 			defaultNetworkExists = true
 		}

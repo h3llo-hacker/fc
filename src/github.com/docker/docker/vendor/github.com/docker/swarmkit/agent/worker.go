@@ -148,7 +148,7 @@ func (w *worker) Assign(ctx context.Context, assignments []*api.AssignmentChange
 // Update updates the set of tasks and secret for the worker.
 // Tasks in the added set will be added to the worker, and tasks in the removed set
 // will be removed from the worker
-// Secrets in the added set will be added to the worker, and secrets in the removed set
+// Serets in the added set will be added to the worker, and secrets in the removed set
 // will be removed from the worker.
 func (w *worker) Update(ctx context.Context, assignments []*api.AssignmentChange) error {
 	w.mu.Lock()
@@ -302,6 +302,15 @@ func reconcileTaskState(ctx context.Context, w *worker, assignments []*api.Assig
 }
 
 func reconcileSecrets(ctx context.Context, w *worker, assignments []*api.AssignmentChange, fullSnapshot bool) error {
+	var secrets exec.SecretsManager
+	provider, ok := w.executor.(exec.SecretsProvider)
+	if !ok {
+		log.G(ctx).Warn("secrets update ignored; executor does not support secrets")
+		return nil
+	}
+
+	secrets = provider.Secrets()
+
 	var (
 		updatedSecrets []api.Secret
 		removedSecrets []string
@@ -317,16 +326,6 @@ func reconcileSecrets(ctx context.Context, w *worker, assignments []*api.Assignm
 
 		}
 	}
-
-	provider, ok := w.executor.(exec.SecretsProvider)
-	if !ok {
-		if len(updatedSecrets) != 0 || len(removedSecrets) != 0 {
-			log.G(ctx).Warn("secrets update ignored; executor does not support secrets")
-		}
-		return nil
-	}
-
-	secrets := provider.Secrets()
 
 	log.G(ctx).WithFields(logrus.Fields{
 		"len(updatedSecrets)": len(updatedSecrets),

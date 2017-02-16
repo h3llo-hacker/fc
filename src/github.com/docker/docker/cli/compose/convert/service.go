@@ -3,6 +3,7 @@ package convert
 import (
 	"fmt"
 	"os"
+	"sort"
 	"time"
 
 	"github.com/docker/docker/api/types"
@@ -14,7 +15,6 @@ import (
 	"github.com/docker/docker/opts"
 	runconfigopts "github.com/docker/docker/runconfig/opts"
 	"github.com/docker/go-connections/nat"
-	"sort"
 )
 
 // Services from compose-file types to engine API types
@@ -187,6 +187,7 @@ func convertServiceNetworks(
 	}
 
 	sort.Sort(byNetworkTarget(nets))
+
 	return nets, nil
 }
 
@@ -359,6 +360,7 @@ func convertResources(source composetypes.Resources) (*swarm.ResourceRequirement
 		}
 	}
 	return resources, nil
+
 }
 
 type byPublishedPort []swarm.PortConfig
@@ -375,14 +377,14 @@ func convertEndpointSpec(source []string) (*swarm.EndpointSpec, error) {
 	}
 
 	for port := range ports {
-		portConfig, err := opts.ConvertPortToPortConfig(port, portBindings)
-		if err != nil {
-			return nil, err
-		}
-		portConfigs = append(portConfigs, portConfig...)
+		portConfigs = append(
+			portConfigs,
+			opts.ConvertPortToPortConfig(port, portBindings)...)
 	}
 
+	// Sorting to make sure these are always in the same order
 	sort.Sort(byPublishedPort(portConfigs))
+
 	return &swarm.EndpointSpec{Ports: portConfigs}, nil
 }
 

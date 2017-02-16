@@ -3,14 +3,15 @@ package container
 import (
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"syscall"
 	"time"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/docker/distribution/digest"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/backend"
 	containertypes "github.com/docker/docker/api/types/container"
@@ -22,8 +23,7 @@ import (
 	"github.com/docker/swarmkit/agent/exec"
 	"github.com/docker/swarmkit/api"
 	"github.com/docker/swarmkit/log"
-	gogotypes "github.com/gogo/protobuf/types"
-	"github.com/opencontainers/go-digest"
+	"github.com/docker/swarmkit/protobuf/ptypes"
 	"golang.org/x/net/context"
 	"golang.org/x/time/rate"
 )
@@ -54,7 +54,7 @@ func (c *containerAdapter) pullImage(ctx context.Context) error {
 	spec := c.container.spec()
 
 	// Skip pulling if the image is referenced by image ID.
-	if _, err := digest.Parse(spec.Image); err == nil {
+	if _, err := digest.ParseDigest(spec.Image); err == nil {
 		return nil
 	}
 
@@ -239,7 +239,7 @@ func (c *containerAdapter) create(ctx context.Context) error {
 
 	container := c.container.task.Spec.GetContainer()
 	if container == nil {
-		return errors.New("unable to get container from task spec")
+		return fmt.Errorf("unable to get container from task spec")
 	}
 
 	// configure secrets
@@ -259,7 +259,28 @@ func (c *containerAdapter) create(ctx context.Context) error {
 	return nil
 }
 
+// checkMounts ensures that the provided mounts won't have any host-specific
+// problems at start up. For example, we disallow bind mounts without an
+// existing path, which slightly different from the container API.
+func (c *containerAdapter) checkMounts() error {
+	spec := c.container.spec()
+	for _, mount := range spec.Mounts {
+		switch mount.Type {
+		case api.MountTypeBind:
+			if _, err := os.Stat(mount.Source); os.IsNotExist(err) {
+				return fmt.Errorf("invalid bind mount source, source path not found: %s", mount.Source)
+			}
+		}
+	}
+
+	return nil
+}
+
 func (c *containerAdapter) start(ctx context.Context) error {
+	if err := c.checkMounts(); err != nil {
+		return err
+	}
+
 	return c.backend.ContainerStart(c.container.name(), nil, "", "")
 }
 
@@ -391,7 +412,7 @@ func (c *containerAdapter) logs(ctx context.Context, options api.LogSubscription
 	}
 
 	if options.Since != nil {
-		since, err := gogotypes.TimestampFromProto(options.Since)
+		since, err := ptypes.Timestamp(options.Since)
 		if err != nil {
 			return nil, err
 		}
@@ -402,7 +423,7 @@ func (c *containerAdapter) logs(ctx context.Context, options api.LogSubscription
 		// See protobuf documentation for details of how this works.
 		apiOptions.Tail = fmt.Sprint(-options.Tail - 1)
 	} else if options.Tail > 0 {
-		return nil, errors.New("tail relative to start of logs not supported via docker API")
+		return nil, fmt.Errorf("tail relative to start of logs not supported via docker API")
 	}
 
 	if len(options.Streams) == 0 {

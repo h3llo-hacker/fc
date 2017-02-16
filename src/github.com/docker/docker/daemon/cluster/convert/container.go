@@ -9,7 +9,7 @@ import (
 	mounttypes "github.com/docker/docker/api/types/mount"
 	types "github.com/docker/docker/api/types/swarm"
 	swarmapi "github.com/docker/swarmkit/api"
-	gogotypes "github.com/gogo/protobuf/types"
+	"github.com/docker/swarmkit/protobuf/ptypes"
 )
 
 func containerSpecFromGRPC(c *swarmapi.ContainerSpec) types.ContainerSpec {
@@ -25,7 +25,6 @@ func containerSpecFromGRPC(c *swarmapi.ContainerSpec) types.ContainerSpec {
 		Groups:    c.Groups,
 		TTY:       c.TTY,
 		OpenStdin: c.OpenStdin,
-		ReadOnly:  c.ReadOnly,
 		Hosts:     c.Hosts,
 		Secrets:   secretReferencesFromGRPC(c.Secrets),
 	}
@@ -76,7 +75,7 @@ func containerSpecFromGRPC(c *swarmapi.ContainerSpec) types.ContainerSpec {
 	}
 
 	if c.StopGracePeriod != nil {
-		grace, _ := gogotypes.DurationFromProto(c.StopGracePeriod)
+		grace, _ := ptypes.Duration(c.StopGracePeriod)
 		containerSpec.StopGracePeriod = &grace
 	}
 
@@ -147,7 +146,6 @@ func containerToGRPC(c types.ContainerSpec) (*swarmapi.ContainerSpec, error) {
 		Groups:    c.Groups,
 		TTY:       c.TTY,
 		OpenStdin: c.OpenStdin,
-		ReadOnly:  c.ReadOnly,
 		Hosts:     c.Hosts,
 		Secrets:   secretReferencesToGRPC(c.Secrets),
 	}
@@ -161,7 +159,7 @@ func containerToGRPC(c types.ContainerSpec) (*swarmapi.ContainerSpec, error) {
 	}
 
 	if c.StopGracePeriod != nil {
-		containerSpec.StopGracePeriod = gogotypes.DurationProto(*c.StopGracePeriod)
+		containerSpec.StopGracePeriod = ptypes.DurationProto(*c.StopGracePeriod)
 	}
 
 	// Mounts
@@ -217,8 +215,8 @@ func containerToGRPC(c types.ContainerSpec) (*swarmapi.ContainerSpec, error) {
 }
 
 func healthConfigFromGRPC(h *swarmapi.HealthConfig) *container.HealthConfig {
-	interval, _ := gogotypes.DurationFromProto(h.Interval)
-	timeout, _ := gogotypes.DurationFromProto(h.Timeout)
+	interval, _ := ptypes.Duration(h.Interval)
+	timeout, _ := ptypes.Duration(h.Timeout)
 	return &container.HealthConfig{
 		Test:     h.Test,
 		Interval: interval,
@@ -230,8 +228,8 @@ func healthConfigFromGRPC(h *swarmapi.HealthConfig) *container.HealthConfig {
 func healthConfigToGRPC(h *container.HealthConfig) *swarmapi.HealthConfig {
 	return &swarmapi.HealthConfig{
 		Test:     h.Test,
-		Interval: gogotypes.DurationProto(h.Interval),
-		Timeout:  gogotypes.DurationProto(h.Timeout),
+		Interval: ptypes.DurationProto(h.Interval),
+		Timeout:  ptypes.DurationProto(h.Timeout),
 		Retries:  int32(h.Retries),
 	}
 }

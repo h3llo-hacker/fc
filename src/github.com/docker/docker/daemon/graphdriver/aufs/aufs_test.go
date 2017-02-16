@@ -210,7 +210,7 @@ func TestMountedFalseResponse(t *testing.T) {
 	}
 }
 
-func TestMountedTrueResponse(t *testing.T) {
+func TestMountedTrueReponse(t *testing.T) {
 	d := newDriver(t)
 	defer os.RemoveAll(tmp)
 	defer d.Cleanup()
@@ -744,10 +744,10 @@ func BenchmarkConcurrentAccess(b *testing.B) {
 	defer os.RemoveAll(tmp)
 	defer d.Cleanup()
 
-	numConcurrent := 256
+	numConcurent := 256
 	// create a bunch of ids
 	var ids []string
-	for i := 0; i < numConcurrent; i++ {
+	for i := 0; i < numConcurent; i++ {
 		ids = append(ids, stringid.GenerateNonCryptoID())
 	}
 
@@ -762,7 +762,7 @@ func BenchmarkConcurrentAccess(b *testing.B) {
 	parent := ids[1]
 	ids = append(ids[2:])
 
-	chErr := make(chan error, numConcurrent)
+	chErr := make(chan error, numConcurent)
 	var outerGroup sync.WaitGroup
 	outerGroup.Add(len(ids))
 	b.StartTimer()

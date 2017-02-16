@@ -301,9 +301,9 @@ func (daemon *Daemon) createNetwork(create types.NetworkCreateRequest, id string
 		return nil, err
 	}
 
-	daemon.pluginRefCount(driver, driverapi.NetworkPluginEndpointType, plugingetter.Acquire)
+	daemon.pluginRefCount(driver, driverapi.NetworkPluginEndpointType, plugingetter.ACQUIRE)
 	if create.IPAM != nil {
-		daemon.pluginRefCount(create.IPAM.Driver, ipamapi.PluginEndpointType, plugingetter.Acquire)
+		daemon.pluginRefCount(create.IPAM.Driver, ipamapi.PluginEndpointType, plugingetter.ACQUIRE)
 	}
 	daemon.LogNetworkEvent(n, "create")
 
@@ -457,9 +457,9 @@ func (daemon *Daemon) deleteNetwork(networkID string, dynamic bool) error {
 	if err := nw.Delete(); err != nil {
 		return err
 	}
-	daemon.pluginRefCount(nw.Type(), driverapi.NetworkPluginEndpointType, plugingetter.Release)
+	daemon.pluginRefCount(nw.Type(), driverapi.NetworkPluginEndpointType, plugingetter.RELEASE)
 	ipamType, _, _, _ := nw.Info().IpamConfig()
-	daemon.pluginRefCount(ipamType, ipamapi.PluginEndpointType, plugingetter.Release)
+	daemon.pluginRefCount(ipamType, ipamapi.PluginEndpointType, plugingetter.RELEASE)
 	daemon.LogNetworkEvent(nw, "destroy")
 	return nil
 }

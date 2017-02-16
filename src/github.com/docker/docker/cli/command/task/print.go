@@ -61,7 +61,7 @@ func (t tasksBySlot) Less(i, j int) bool {
 // Print task information in a table format.
 // Besides this, command `docker node ps <node>`
 // and `docker stack ps` will call this, too.
-func Print(dockerCli command.Cli, ctx context.Context, tasks []swarm.Task, resolver *idresolver.IDResolver, noTrunc bool) error {
+func Print(dockerCli *command.DockerCli, ctx context.Context, tasks []swarm.Task, resolver *idresolver.IDResolver, noTrunc bool) error {
 	sort.Stable(tasksBySlot(tasks))
 
 	writer := tabwriter.NewWriter(dockerCli.Out(), 0, 4, 2, ' ', 0)
@@ -70,11 +70,15 @@ func Print(dockerCli command.Cli, ctx context.Context, tasks []swarm.Task, resol
 	defer writer.Flush()
 	fmt.Fprintln(writer, strings.Join([]string{"ID", "NAME", "IMAGE", "NODE", "DESIRED STATE", "CURRENT STATE", "ERROR", "PORTS"}, "\t"))
 
-	return print(writer, ctx, tasks, resolver, noTrunc)
+	if err := print(writer, ctx, tasks, resolver, noTrunc); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // PrintQuiet shows task list in a quiet way.
-func PrintQuiet(dockerCli command.Cli, tasks []swarm.Task) error {
+func PrintQuiet(dockerCli *command.DockerCli, tasks []swarm.Task) error {
 	sort.Stable(tasksBySlot(tasks))
 
 	out := dockerCli.Out()

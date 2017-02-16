@@ -1,7 +1,10 @@
 package service
 
 import (
+	"encoding/csv"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -11,11 +14,32 @@ import (
 	"github.com/docker/docker/opts"
 	runconfigopts "github.com/docker/docker/runconfig/opts"
 	"github.com/docker/go-connections/nat"
+	units "github.com/docker/go-units"
 	"github.com/spf13/cobra"
 )
 
 type int64Value interface {
 	Value() int64
+}
+
+type memBytes int64
+
+func (m *memBytes) String() string {
+	return units.BytesSize(float64(m.Value()))
+}
+
+func (m *memBytes) Set(value string) error {
+	val, err := units.RAMInBytes(value)
+	*m = memBytes(val)
+	return err
+}
+
+func (m *memBytes) Type() string {
+	return "bytes"
+}
+
+func (m *memBytes) Value() int64 {
+	return int64(*m)
 }
 
 // PositiveDurationOpt is an option type for time.Duration that uses a pointer.
@@ -118,6 +142,98 @@ func (f *floatValue) Value() float32 {
 	return float32(*f)
 }
 
+// SecretRequestSpec is a type for requesting secrets
+type SecretRequestSpec struct {
+	source string
+	target string
+	uid    string
+	gid    string
+	mode   os.FileMode
+}
+
+// SecretOpt is a Value type for parsing secrets
+type SecretOpt struct {
+	values []*SecretRequestSpec
+}
+
+// Set a new secret value
+func (o *SecretOpt) Set(value string) error {
+	csvReader := csv.NewReader(strings.NewReader(value))
+	fields, err := csvReader.Read()
+	if err != nil {
+		return err
+	}
+
+	spec := &SecretRequestSpec{
+		source: "",
+		target: "",
+		uid:    "0",
+		gid:    "0",
+		mode:   0444,
+	}
+
+	for _, field := range fields {
+		parts := strings.SplitN(field, "=", 2)
+		key := strings.ToLower(parts[0])
+
+		if len(parts) != 2 {
+			return fmt.Errorf("invalid field '%s' must be a key=value pair", field)
+		}
+
+		value := parts[1]
+		switch key {
+		case "source", "src":
+			spec.source = value
+		case "target":
+			tDir, _ := filepath.Split(value)
+			if tDir != "" {
+				return fmt.Errorf("target must not have a path")
+			}
+			spec.target = value
+		case "uid":
+			spec.uid = value
+		case "gid":
+			spec.gid = value
+		case "mode":
+			m, err := strconv.ParseUint(value, 0, 32)
+			if err != nil {
+				return fmt.Errorf("invalid mode specified: %v", err)
+			}
+
+			spec.mode = os.FileMode(m)
+		default:
+			return fmt.Errorf("invalid field in secret request: %s", key)
+		}
+	}
+
+	if spec.source == "" {
+		return fmt.Errorf("source is required")
+	}
+
+	o.values = append(o.values, spec)
+	return nil
+}
+
+// Type returns the type of this option
+func (o *SecretOpt) Type() string {
+	return "secret"
+}
+
+// String returns a string repr of this option
+func (o *SecretOpt) String() string {
+	secrets := []string{}
+	for _, secret := range o.values {
+		repr := fmt.Sprintf("%s -> %s", secret.source, secret.target)
+		secrets = append(secrets, repr)
+	}
+	return strings.Join(secrets, ", ")
+}
+
+// Value returns the secret requests
+func (o *SecretOpt) Value() []*SecretRequestSpec {
+	return o.values
+}
+
 type updateOptions struct {
 	parallelism     uint64
 	delay           time.Duration
@@ -128,9 +244,9 @@ type updateOptions struct {
 
 type resourceOptions struct {
 	limitCPU      opts.NanoCPUs
-	limitMemBytes opts.MemBytes
+	limitMemBytes memBytes
 	resCPU        opts.NanoCPUs
-	resMemBytes   opts.MemBytes
+	resMemBytes   memBytes
 }
 
 func (r *resourceOptions) ToResourceRequirements() *swarm.ResourceRequirements {
@@ -188,7 +304,7 @@ type logDriverOptions struct {
 }
 
 func newLogDriverOptions() logDriverOptions {
-	return logDriverOptions{opts: opts.NewListOpts(opts.ValidateEnv)}
+	return logDriverOptions{opts: opts.NewListOpts(runconfigopts.ValidateEnv)}
 }
 
 func (ldo *logDriverOptions) toLogDriver() *swarm.Driver {
@@ -282,7 +398,6 @@ type serviceOptions struct {
 	user            string
 	groups          opts.ListOpts
 	tty             bool
-	readOnly        bool
 	mounts          opts.MountOpt
 	dns             opts.ListOpts
 	dnsSearch       opts.ListOpts
@@ -311,38 +426,19 @@ type serviceOptions struct {
 
 func newServiceOptions() *serviceOptions {
 	return &serviceOptions{
-		labels:          opts.NewListOpts(opts.ValidateEnv),
+		labels:          opts.NewListOpts(runconfigopts.ValidateEnv),
 		constraints:     opts.NewListOpts(nil),
-		containerLabels: opts.NewListOpts(opts.ValidateEnv),
-		env:             opts.NewListOpts(opts.ValidateEnv),
+		containerLabels: opts.NewListOpts(runconfigopts.ValidateEnv),
+		env:             opts.NewListOpts(runconfigopts.ValidateEnv),
 		envFile:         opts.NewListOpts(nil),
 		groups:          opts.NewListOpts(nil),
 		logDriver:       newLogDriverOptions(),
 		dns:             opts.NewListOpts(opts.ValidateIPAddress),
 		dnsOption:       opts.NewListOpts(nil),
 		dnsSearch:       opts.NewListOpts(opts.ValidateDNSSearch),
-		hosts:           opts.NewListOpts(opts.ValidateExtraHost),
+		hosts:           opts.NewListOpts(runconfigopts.ValidateExtraHost),
 		networks:        opts.NewListOpts(nil),
 	}
-}
-
-func (opts *serviceOptions) ToServiceMode() (swarm.ServiceMode, error) {
-	serviceMode := swarm.ServiceMode{}
-	switch opts.mode {
-	case "global":
-		if opts.replicas.Value() != nil {
-			return serviceMode, fmt.Errorf("replicas can only be used with replicated mode")
-		}
-
-		serviceMode.Global = &swarm.GlobalService{}
-	case "replicated":
-		serviceMode.Replicated = &swarm.ReplicatedService{
-			Replicas: opts.replicas.Value(),
-		}
-	default:
-		return serviceMode, fmt.Errorf("Unknown mode: %s, only replicated and global supported", opts.mode)
-	}
-	return serviceMode, nil
 }
 
 func (opts *serviceOptions) ToService() (swarm.ServiceSpec, error) {
@@ -367,16 +463,6 @@ func (opts *serviceOptions) ToService() (swarm.ServiceSpec, error) {
 		currentEnv = append(currentEnv, env)
 	}
 
-	healthConfig, err := opts.healthcheck.toHealthConfig()
-	if err != nil {
-		return service, err
-	}
-
-	serviceMode, err := opts.ToServiceMode()
-	if err != nil {
-		return service, err
-	}
-
 	service = swarm.ServiceSpec{
 		Annotations: swarm.Annotations{
 			Name:   opts.name,
@@ -393,7 +479,6 @@ func (opts *serviceOptions) ToService() (swarm.ServiceSpec, error) {
 				User:     opts.user,
 				Groups:   opts.groups.GetAll(),
 				TTY:      opts.tty,
-				ReadOnly: opts.readOnly,
 				Mounts:   opts.mounts.Value(),
 				DNSConfig: &swarm.DNSConfig{
 					Nameservers: opts.dns.GetAll(),
@@ -403,7 +488,6 @@ func (opts *serviceOptions) ToService() (swarm.ServiceSpec, error) {
 				Hosts:           convertExtraHostsToSwarmHosts(opts.hosts.GetAll()),
 				StopGracePeriod: opts.stopGrace.Value(),
 				Secrets:         nil,
-				Healthcheck:     healthConfig,
 			},
 			Networks:      convertNetworks(opts.networks.GetAll()),
 			Resources:     opts.resources.ToResourceRequirements(),
@@ -414,7 +498,7 @@ func (opts *serviceOptions) ToService() (swarm.ServiceSpec, error) {
 			LogDriver: opts.logDriver.toLogDriver(),
 		},
 		Networks: convertNetworks(opts.networks.GetAll()),
-		Mode:     serviceMode,
+		Mode:     swarm.ServiceMode{},
 		UpdateConfig: &swarm.UpdateConfig{
 			Parallelism:     opts.update.parallelism,
 			Delay:           opts.update.delay,
@@ -425,6 +509,26 @@ func (opts *serviceOptions) ToService() (swarm.ServiceSpec, error) {
 		EndpointSpec: opts.endpoint.ToEndpointSpec(),
 	}
 
+	healthConfig, err := opts.healthcheck.toHealthConfig()
+	if err != nil {
+		return service, err
+	}
+	service.TaskTemplate.ContainerSpec.Healthcheck = healthConfig
+
+	switch opts.mode {
+	case "global":
+		if opts.replicas.Value() != nil {
+			return service, fmt.Errorf("replicas can only be used with replicated mode")
+		}
+
+		service.Mode.Global = &swarm.GlobalService{}
+	case "replicated":
+		service.Mode.Replicated = &swarm.ReplicatedService{
+			Replicas: opts.replicas.Value(),
+		}
+	default:
+		return service, fmt.Errorf("Unknown mode: %s", opts.mode)
+	}
 	return service, nil
 }
 
@@ -436,7 +540,6 @@ func addServiceFlags(cmd *cobra.Command, opts *serviceOptions) {
 	flags.StringVarP(&opts.workdir, flagWorkdir, "w", "", "Working directory inside the container")
 	flags.StringVarP(&opts.user, flagUser, "u", "", "Username or UID (format: <name|uid>[:<group|gid>])")
 	flags.StringVar(&opts.hostname, flagHostname, "", "Container hostname")
-	flags.SetAnnotation(flagHostname, "version", []string{"1.25"})
 
 	flags.Var(&opts.resources.limitCPU, flagLimitCPU, "Limit CPUs")
 	flags.Var(&opts.resources.limitMemBytes, flagLimitMemory, "Limit Memory")
@@ -454,12 +557,10 @@ func addServiceFlags(cmd *cobra.Command, opts *serviceOptions) {
 	flags.Uint64Var(&opts.update.parallelism, flagUpdateParallelism, 1, "Maximum number of tasks updated simultaneously (0 to update all at once)")
 	flags.DurationVar(&opts.update.delay, flagUpdateDelay, time.Duration(0), "Delay between updates (ns|us|ms|s|m|h) (default 0s)")
 	flags.DurationVar(&opts.update.monitor, flagUpdateMonitor, time.Duration(0), "Duration after each task update to monitor for failure (ns|us|ms|s|m|h) (default 0s)")
-	flags.SetAnnotation(flagUpdateMonitor, "version", []string{"1.25"})
 	flags.StringVar(&opts.update.onFailure, flagUpdateFailureAction, "pause", "Action on update failure (pause|continue)")
 	flags.Var(&opts.update.maxFailureRatio, flagUpdateMaxFailureRatio, "Failure rate to tolerate during an update")
-	flags.SetAnnotation(flagUpdateMaxFailureRatio, "version", []string{"1.25"})
 
-	flags.StringVar(&opts.endpoint.mode, flagEndpointMode, "vip", "Endpoint mode (vip or dnsrr)")
+	flags.StringVar(&opts.endpoint.mode, flagEndpointMode, "", "Endpoint mode (vip or dnsrr)")
 
 	flags.BoolVar(&opts.registryAuth, flagRegistryAuth, false, "Send registry authentication details to swarm agents")
 
@@ -467,21 +568,12 @@ func addServiceFlags(cmd *cobra.Command, opts *serviceOptions) {
 	flags.Var(&opts.logDriver.opts, flagLogOpt, "Logging driver options")
 
 	flags.StringVar(&opts.healthcheck.cmd, flagHealthCmd, "", "Command to run to check health")
-	flags.SetAnnotation(flagHealthCmd, "version", []string{"1.25"})
 	flags.Var(&opts.healthcheck.interval, flagHealthInterval, "Time between running the check (ns|us|ms|s|m|h)")
-	flags.SetAnnotation(flagHealthInterval, "version", []string{"1.25"})
 	flags.Var(&opts.healthcheck.timeout, flagHealthTimeout, "Maximum time to allow one check to run (ns|us|ms|s|m|h)")
-	flags.SetAnnotation(flagHealthTimeout, "version", []string{"1.25"})
 	flags.IntVar(&opts.healthcheck.retries, flagHealthRetries, 0, "Consecutive failures needed to report unhealthy")
-	flags.SetAnnotation(flagHealthRetries, "version", []string{"1.25"})
 	flags.BoolVar(&opts.healthcheck.noHealthcheck, flagNoHealthcheck, false, "Disable any container-specified HEALTHCHECK")
-	flags.SetAnnotation(flagNoHealthcheck, "version", []string{"1.25"})
 
 	flags.BoolVarP(&opts.tty, flagTTY, "t", false, "Allocate a pseudo-TTY")
-	flags.SetAnnotation(flagTTY, "version", []string{"1.25"})
-
-	flags.BoolVar(&opts.readOnly, flagReadOnly, false, "Mount the container's root filesystem as read only")
-	flags.SetAnnotation(flagReadOnly, "version", []string{"1.26"})
 }
 
 const (
@@ -526,7 +618,6 @@ const (
 	flagPublish               = "publish"
 	flagPublishRemove         = "publish-rm"
 	flagPublishAdd            = "publish-add"
-	flagReadOnly              = "read-only"
 	flagReplicas              = "replicas"
 	flagReserveCPU            = "reserve-cpu"
 	flagReserveMemory         = "reserve-memory"

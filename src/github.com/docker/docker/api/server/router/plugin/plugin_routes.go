@@ -10,7 +10,6 @@ import (
 	distreference "github.com/docker/distribution/reference"
 	"github.com/docker/docker/api/server/httputils"
 	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/pkg/ioutils"
 	"github.com/docker/docker/pkg/streamformatter"
 	"github.com/docker/docker/reference"
@@ -299,15 +298,7 @@ func (pr *pluginRouter) setPlugin(ctx context.Context, w http.ResponseWriter, r 
 }
 
 func (pr *pluginRouter) listPlugins(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) error {
-	if err := httputils.ParseForm(r); err != nil {
-		return err
-	}
-
-	pluginFilters, err := filters.FromParam(r.Form.Get("filters"))
-	if err != nil {
-		return err
-	}
-	l, err := pr.backend.List(pluginFilters)
+	l, err := pr.backend.List()
 	if err != nil {
 		return err
 	}

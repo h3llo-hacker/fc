@@ -26,7 +26,7 @@ const (
 	uniqueSizeHeader  = "UNIQUE SiZE"
 )
 
-// DiskUsageContext contains disk usage specific information required by the formatter, encapsulate a Context struct.
+// DiskUsageContext contains disk usage specific information required by the formater, encapsulate a Context struct.
 type DiskUsageContext struct {
 	Context
 	Verbose    bool
@@ -158,10 +158,6 @@ type diskUsageImagesContext struct {
 	images    []*types.ImageSummary
 }
 
-func (c *diskUsageImagesContext) MarshalJSON() ([]byte, error) {
-	return marshalJSON(c)
-}
-
 func (c *diskUsageImagesContext) Type() string {
 	c.AddHeader(typeHeader)
 	return "Images"
@@ -214,10 +210,6 @@ type diskUsageContainersContext struct {
 	HeaderContext
 	verbose    bool
 	containers []*types.Container
-}
-
-func (c *diskUsageContainersContext) MarshalJSON() ([]byte, error) {
-	return marshalJSON(c)
 }
 
 func (c *diskUsageContainersContext) Type() string {
@@ -282,10 +274,6 @@ type diskUsageVolumesContext struct {
 	HeaderContext
 	verbose bool
 	volumes []*types.Volume
-}
-
-func (c *diskUsageVolumesContext) MarshalJSON() ([]byte, error) {
-	return marshalJSON(c)
 }
 
 func (c *diskUsageVolumesContext) Type() string {

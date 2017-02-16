@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/docker/distribution/reference"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/pkg/stringid"
+	"github.com/docker/docker/reference"
 	units "github.com/docker/go-units"
 )
 
@@ -20,7 +20,7 @@ const (
 	digestHeader     = "DIGEST"
 )
 
-// ImageContext contains image specific information required by the formatter, encapsulate a Context struct.
+// ImageContext contains image specific information required by the formater, encapsulate a Context struct.
 type ImageContext struct {
 	Context
 	Digest bool
@@ -95,23 +95,21 @@ func imageFormat(ctx ImageContext, images []types.ImageSummary, format func(subC
 			repoDigests := map[string][]string{}
 
 			for _, refString := range append(image.RepoTags) {
-				ref, err := reference.ParseNormalizedNamed(refString)
+				ref, err := reference.ParseNamed(refString)
 				if err != nil {
 					continue
 				}
 				if nt, ok := ref.(reference.NamedTagged); ok {
-					familiarRef := reference.FamiliarName(ref)
-					repoTags[familiarRef] = append(repoTags[familiarRef], nt.Tag())
+					repoTags[ref.Name()] = append(repoTags[ref.Name()], nt.Tag())
 				}
 			}
 			for _, refString := range append(image.RepoDigests) {
-				ref, err := reference.ParseNormalizedNamed(refString)
+				ref, err := reference.ParseNamed(refString)
 				if err != nil {
 					continue
 				}
 				if c, ok := ref.(reference.Canonical); ok {
-					familiarRef := reference.FamiliarName(ref)
-					repoDigests[familiarRef] = append(repoDigests[familiarRef], c.Digest().String())
+					repoDigests[ref.Name()] = append(repoDigests[ref.Name()], c.Digest().String())
 				}
 			}
 
@@ -190,10 +188,6 @@ type imageContext struct {
 	repo   string
 	tag    string
 	digest string
-}
-
-func (c *imageContext) MarshalJSON() ([]byte, error) {
-	return marshalJSON(c)
 }
 
 func (c *imageContext) ID() string {

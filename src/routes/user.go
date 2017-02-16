@@ -186,3 +186,37 @@ func userDelete(c *gin.Context) {
 		})
 	}
 }
+
+func userLogin(c *gin.Context) {
+	user := U.User{
+		EmailAddress: c.PostForm("email"),
+		Password:     c.PostForm("password"),
+	}
+	if !user.CheckLogin() {
+		c.JSON(401, gin.H{
+			"login": "false",
+		})
+		return
+	}
+	c.JSON(200, gin.H{
+		"login": "true",
+	})
+
+	go func() {
+		ip := c.ClientIP()
+		region := utils.IP2Region(ip)
+		login := types.Register_struct{
+			IP:     ip,
+			Region: region,
+			System: types.System_struct{
+				OS: "",
+				UA: c.Request.UserAgent(),
+			},
+			Date: time.Now(),
+		}
+		err := user.UpdateUserLogin(login)
+		if err != nil {
+			log.Errorf("Update User Login Error: [%v], User: [%v]", err, user.EmailAddress)
+		}
+	}()
+}

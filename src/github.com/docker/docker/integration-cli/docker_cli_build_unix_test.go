@@ -14,9 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/docker/docker/integration-cli/checker"
-	"github.com/docker/docker/pkg/testutil"
-	icmd "github.com/docker/docker/pkg/testutil/cmd"
+	"github.com/docker/docker/pkg/integration"
+	"github.com/docker/docker/pkg/integration/checker"
 	"github.com/docker/go-units"
 	"github.com/go-check/check"
 )
@@ -25,11 +24,13 @@ func (s *DockerSuite) TestBuildResourceConstraintsAreUsed(c *check.C) {
 	testRequires(c, cpuCfsQuota)
 	name := "testbuildresourceconstraints"
 
-	ctx := fakeContext(c, `
+	ctx, err := fakeContext(`
 	FROM hello-world:frozen
 	RUN ["/hello"]
 	`, map[string]string{})
-	_, _, err := dockerCmdInDir(c, ctx.Dir, "build", "--no-cache", "--rm=false", "--memory=64m", "--memory-swap=-1", "--cpuset-cpus=0", "--cpuset-mems=0", "--cpu-shares=100", "--cpu-quota=8000", "--ulimit", "nofile=42", "-t", name, ".")
+	c.Assert(err, checker.IsNil)
+
+	_, _, err = dockerCmdInDir(c, ctx.Dir, "build", "--no-cache", "--rm=false", "--memory=64m", "--memory-swap=-1", "--cpuset-cpus=0", "--cpuset-mems=0", "--cpu-shares=100", "--cpu-quota=8000", "--ulimit", "nofile=42", "-t", name, ".")
 	if err != nil {
 		c.Fatal(err)
 	}
@@ -99,10 +100,12 @@ func (s *DockerSuite) TestBuildAddChangeOwnership(c *check.C) {
 		}
 		defer testFile.Close()
 
-		icmd.RunCmd(icmd.Cmd{
-			Command: []string{"chown", "daemon:daemon", "foo"},
-			Dir:     tmpDir,
-		}).Assert(c, icmd.Success)
+		chownCmd := exec.Command("chown", "daemon:daemon", "foo")
+		chownCmd.Dir = tmpDir
+		out, _, err := runCommandWithOutput(chownCmd)
+		if err != nil {
+			c.Fatal(err, out)
+		}
 
 		if err := ioutil.WriteFile(filepath.Join(tmpDir, "Dockerfile"), []byte(dockerfile), 0644); err != nil {
 			c.Fatalf("failed to open destination dockerfile: %v", err)
@@ -112,7 +115,9 @@ func (s *DockerSuite) TestBuildAddChangeOwnership(c *check.C) {
 
 	defer ctx.Close()
 
-	buildImageSuccessfully(c, name, withExternalBuildContext(ctx))
+	if _, err := buildImageFromContext(name, ctx, true); err != nil {
+		c.Fatalf("build failed to complete for TestBuildAddChangeOwnership: %v", err)
+	}
 }
 
 // Test that an infinite sleep during a build is killed if the client disconnects.
@@ -133,15 +138,16 @@ func (s *DockerSuite) TestBuildCancellationKillsSleep(c *check.C) {
 	defer observer.Stop()
 
 	// (Note: one year, will never finish)
-	ctx := fakeContext(c, "FROM busybox\nRUN sleep 31536000", nil)
+	ctx, err := fakeContext("FROM busybox\nRUN sleep 31536000", nil)
+	if err != nil {
+		c.Fatal(err)
+	}
 	defer ctx.Close()
 
 	buildCmd := exec.Command(dockerBinary, "build", "-t", name, ".")
 	buildCmd.Dir = ctx.Dir
 
 	stdoutBuild, err := buildCmd.StdoutPipe()
-	c.Assert(err, checker.IsNil)
-
 	if err := buildCmd.Start(); err != nil {
 		c.Fatalf("failed to run build: %s", err)
 	}
@@ -188,7 +194,7 @@ func (s *DockerSuite) TestBuildCancellationKillsSleep(c *check.C) {
 	}
 
 	// Get the exit status of `docker build`, check it exited because killed.
-	if err := buildCmd.Wait(); err != nil && !testutil.IsKilled(err) {
+	if err := buildCmd.Wait(); err != nil && !integration.IsKilled(err) {
 		c.Fatalf("wait failed during build run: %T %s", err, err)
 	}
 

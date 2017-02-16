@@ -22,8 +22,8 @@ import (
 	"github.com/docker/go-connections/nat"
 	"github.com/docker/swarmkit/agent/exec"
 	"github.com/docker/swarmkit/api"
+	"github.com/docker/swarmkit/protobuf/ptypes"
 	"github.com/docker/swarmkit/template"
-	gogotypes "github.com/gogo/protobuf/types"
 )
 
 const (
@@ -323,8 +323,8 @@ func (c *containerConfig) healthcheck() *enginecontainer.HealthConfig {
 	if hcSpec == nil {
 		return nil
 	}
-	interval, _ := gogotypes.DurationFromProto(hcSpec.Interval)
-	timeout, _ := gogotypes.DurationFromProto(hcSpec.Timeout)
+	interval, _ := ptypes.Duration(hcSpec.Interval)
+	timeout, _ := ptypes.Duration(hcSpec.Timeout)
 	return &enginecontainer.HealthConfig{
 		Test:     hcSpec.Test,
 		Interval: interval,
@@ -335,11 +335,10 @@ func (c *containerConfig) healthcheck() *enginecontainer.HealthConfig {
 
 func (c *containerConfig) hostConfig() *enginecontainer.HostConfig {
 	hc := &enginecontainer.HostConfig{
-		Resources:      c.resources(),
-		GroupAdd:       c.spec().Groups,
-		PortBindings:   c.portBindings(),
-		Mounts:         c.mounts(),
-		ReadonlyRootfs: c.spec().ReadOnly,
+		Resources:    c.resources(),
+		GroupAdd:     c.spec().Groups,
+		PortBindings: c.portBindings(),
+		Mounts:       c.mounts(),
 	}
 
 	if c.spec().DNSConfig != nil {
@@ -587,13 +586,7 @@ func (c *containerConfig) networkCreateRequest(name string) (clustertypes.Networ
 		options.IPAM.Config = append(options.IPAM.Config, c)
 	}
 
-	return clustertypes.NetworkCreateRequest{
-		ID: na.Network.ID,
-		NetworkCreateRequest: types.NetworkCreateRequest{
-			Name:          name,
-			NetworkCreate: options,
-		},
-	}, nil
+	return clustertypes.NetworkCreateRequest{na.Network.ID, types.NetworkCreateRequest{Name: name, NetworkCreate: options}}, nil
 }
 
 func (c containerConfig) eventFilter() filters.Args {

@@ -138,10 +138,6 @@ type containerStatsContext struct {
 	s StatsEntry
 }
 
-func (c *containerStatsContext) MarshalJSON() ([]byte, error) {
-	return marshalJSON(c)
-}
-
 func (c *containerStatsContext) Container() string {
 	c.AddHeader(containerHeader)
 	return c.s.Container

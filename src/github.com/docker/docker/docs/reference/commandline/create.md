@@ -44,7 +44,6 @@ Options:
       --cpuset-cpus string          CPUs in which to allow execution (0-3, 0,1)
       --cpuset-mems string          MEMs in which to allow execution (0-3, 0,1)
       --device value                Add a host device to the container (default [])
-      --device-cgroup-rule value    Add a rule to the cgroup allowed devices list
       --device-read-bps value       Limit read rate (bytes per second) from a device (default [])
       --device-read-iops value      Limit read rate (IO per second) from a device (default [])
       --device-write-bps value      Limit write rate (bytes per second) to a device (default [])
@@ -69,8 +68,8 @@ Options:
   -i, --interactive                 Keep STDIN open even if not attached
       --io-maxbandwidth string      Maximum IO bandwidth limit for the system drive (Windows only)
       --io-maxiops uint             Maximum IOps limit for the system drive (Windows only)
-      --ip string                   IPv4 address (e.g., 172.30.100.104)
-      --ip6 string                  IPv6 address (e.g., 2001:db8::33)
+      --ip string                   Container IPv4 address (e.g. 172.30.100.104)
+      --ip6 string                  Container IPv6 address (e.g. 2001:db8::33)
       --ipc string                  IPC namespace to use
       --isolation string            Container isolation technology
       --kernel-memory string        Kernel memory limit
@@ -80,7 +79,7 @@ Options:
       --link-local-ip value         Container IPv4/IPv6 link-local addresses (default [])
       --log-driver string           Logging driver for the container
       --log-opt value               Log driver options (default [])
-      --mac-address string          Container MAC address (e.g., 92:d0:c6:0a:29:33)
+      --mac-address string          Container MAC address (e.g. 92:d0:c6:0a:29:33)
   -m, --memory string               Memory limit
       --memory-reservation string   Memory soft limit
       --memory-swap string          Swap limit equal to memory plus swap: '-1' to enable unlimited swap
@@ -107,7 +106,7 @@ Options:
       --rm                          Automatically remove the container when it exits
       --runtime string              Runtime to use for this container
       --security-opt value          Security Options (default [])
-      --shm-size bytes              Size of /dev/shm
+      --shm-size string             Size of /dev/shm, default value is 64MB.
                                     The format is `<number><unit>`. `number` must be greater than `0`.
                                     Unit is optional and can be `b` (bytes), `k` (kilobytes), `m` (megabytes),
                                     or `g` (gigabytes). If you omit the unit, the system uses bytes.

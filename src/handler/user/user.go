@@ -93,11 +93,7 @@ func (user *User) QueryUser(items []string) ([]types.User, error) {
 	i := bson.M{"UserID": user.UserID}
 	u := bson.M{"UserURL": user.UserURL}
 	query = bson.M{"$or": []bson.M{e, u, i}}
-	// if valid.IsEmail(user.EmailAddress) {
-	// 	query = bson.M{"EmailAddress": user.EmailAddress}
-	// } else {
-	// 	query = bson.M{"UserURL": user.UserURL}
-	// }
+
 	if user.EmailAddress == "" && user.UserURL == "" {
 		query = bson.M{}
 	}
@@ -220,6 +216,36 @@ func updateUserRegion(uid, region string) error {
 	err := db.MongoUpdate("user", query, update)
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+func (user *User) CheckLogin() bool {
+	items := []string{"Password"}
+	u, err := user.QueryUser(items)
+	if err != nil || len(u) == 0 {
+		return false
+	}
+	if utils.Password(user.Password) == u[0].Password {
+		return true
+	}
+	return false
+}
+
+func (user *User) UpdateUserLogin(login types.Register_struct) error {
+	update := bson.M{"$push": bson.M{"Login.LastLogins": login}}
+	user.UpdateUser(update)
+	update = bson.M{"$inc": bson.M{"Login.LoginTimes": 1}}
+	user.UpdateUser(update)
+	items := []string{"Login.LoginTimes"}
+	u, e := user.QueryUserRaw(items)
+	if e != nil {
+		return e
+	}
+	loginTimes := u[0].(bson.M)["Login"].(bson.M)["LoginTimes"].(int)
+	if loginTimes > 20 {
+		update := bson.M{"$pop": bson.M{"Login.LastLogins": -1}}
+		user.UpdateUser(update)
 	}
 	return nil
 }

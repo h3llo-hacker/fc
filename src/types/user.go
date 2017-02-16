@@ -22,7 +22,7 @@ type Register_struct struct {
 	IP     string        `bson:"IP",valid:"ipv4"`
 	Region string        `bson:"Region"`
 	System System_struct `bson:"System"`
-	Date   time.Time     `bson:"Date"`
+	Date   time.Time     `bson:"Date"` // MongoDB is ISODate (UTC)
 }
 
 type UserChallenge struct {

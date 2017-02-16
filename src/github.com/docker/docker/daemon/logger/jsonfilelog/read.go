@@ -137,11 +137,7 @@ func tailFile(f io.ReadSeeker, logWatcher *logger.LogWatcher, tail int, since ti
 		if !since.IsZero() && msg.Timestamp.Before(since) {
 			continue
 		}
-		select {
-		case <-logWatcher.WatchClose():
-			return
-		case logWatcher.Msg <- msg:
-		}
+		logWatcher.Msg <- msg
 	}
 }
 

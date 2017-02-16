@@ -5,7 +5,7 @@ package daemon
 import (
 	"fmt"
 
-	"github.com/docker/docker/opts"
+	runconfigopts "github.com/docker/docker/runconfig/opts"
 	units "github.com/docker/go-units"
 	"github.com/spf13/pflag"
 )
@@ -14,7 +14,6 @@ var (
 	defaultPidFile  = "/var/run/docker.pid"
 	defaultGraph    = "/var/lib/docker"
 	defaultExecRoot = "/var/run/docker"
-	defaultShmSize  = int64(67108864)
 )
 
 // Config defines the configuration of a docker daemon.
@@ -37,7 +36,6 @@ type Config struct {
 	Init                 bool                     `json:"init,omitempty"`
 	InitPath             string                   `json:"init-path,omitempty"`
 	SeccompProfile       string                   `json:"seccomp-profile,omitempty"`
-	ShmSize              opts.MemBytes            `json:"default-shm-size,omitempty"`
 }
 
 // bridgeConfig stores all the bridge driver specific
@@ -68,12 +66,9 @@ func (config *Config) InstallFlags(flags *pflag.FlagSet) {
 
 	config.Ulimits = make(map[string]*units.Ulimit)
 
-	// Set default value for `--default-shm-size`
-	config.ShmSize = opts.MemBytes(defaultShmSize)
-
 	// Then platform-specific install flags
 	flags.BoolVar(&config.EnableSelinuxSupport, "selinux-enabled", false, "Enable selinux support")
-	flags.Var(opts.NewUlimitOpt(&config.Ulimits), "default-ulimit", "Default ulimits for containers")
+	flags.Var(runconfigopts.NewUlimitOpt(&config.Ulimits), "default-ulimit", "Default ulimits for containers")
 	flags.BoolVar(&config.bridgeConfig.EnableIPTables, "iptables", true, "Enable addition of iptables rules")
 	flags.BoolVar(&config.bridgeConfig.EnableIPForward, "ip-forward", true, "Enable net.ipv4.ip_forward")
 	flags.BoolVar(&config.bridgeConfig.EnableIPMasq, "ip-masq", true, "Enable IP masquerading")
@@ -94,7 +89,6 @@ func (config *Config) InstallFlags(flags *pflag.FlagSet) {
 	flags.Int64Var(&config.CPURealtimePeriod, "cpu-rt-period", 0, "Limit the CPU real-time period in microseconds")
 	flags.Int64Var(&config.CPURealtimeRuntime, "cpu-rt-runtime", 0, "Limit the CPU real-time runtime in microseconds")
 	flags.StringVar(&config.SeccompProfile, "seccomp-profile", "", "Path to seccomp profile")
-	flags.Var(&config.ShmSize, "default-shm-size", "Default shm size for containers")
 
 	config.attachExperimentalFlags(flags)
 }

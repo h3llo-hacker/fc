@@ -15,9 +15,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/docker/docker/integration-cli/checker"
-	"github.com/docker/docker/integration-cli/request"
-	icmd "github.com/docker/docker/pkg/testutil/cmd"
+	"github.com/docker/docker/pkg/integration/checker"
+	icmd "github.com/docker/docker/pkg/integration/cmd"
 	"github.com/go-check/check"
 )
 
@@ -82,13 +81,17 @@ func (s *DockerSuite) TestExecAfterContainerRestart(c *check.C) {
 
 func (s *DockerDaemonSuite) TestExecAfterDaemonRestart(c *check.C) {
 	// TODO Windows CI: Requires a little work to get this ported.
-	testRequires(c, DaemonIsLinux, SameHostDaemon)
-	s.d.StartWithBusybox(c)
+	testRequires(c, DaemonIsLinux)
+	testRequires(c, SameHostDaemon)
+
+	err := s.d.StartWithBusybox()
+	c.Assert(err, checker.IsNil)
 
 	out, err := s.d.Cmd("run", "-d", "--name", "top", "-p", "80", "busybox:latest", "top")
 	c.Assert(err, checker.IsNil, check.Commentf("Could not run top: %s", out))
 
-	s.d.Restart(c)
+	err = s.d.Restart()
+	c.Assert(err, checker.IsNil, check.Commentf("Could not restart daemon"))
 
 	out, err = s.d.Cmd("start", "top")
 	c.Assert(err, checker.IsNil, check.Commentf("Could not start top after daemon restart: %s", out))
@@ -136,14 +139,14 @@ func (s *DockerSuite) TestExecExitStatus(c *check.C) {
 
 func (s *DockerSuite) TestExecPausedContainer(c *check.C) {
 	testRequires(c, IsPausable)
-	defer unpauseAllContainers(c)
+	defer unpauseAllContainers()
 
 	out, _ := runSleepingContainer(c, "-d", "--name", "testing")
 	ContainerID := strings.TrimSpace(out)
 
 	dockerCmd(c, "pause", "testing")
 	out, _, err := dockerCmdWithError("exec", "-i", "-t", ContainerID, "echo", "hello")
-	c.Assert(err, checker.NotNil, check.Commentf("container should fail to exec new command if it is paused"))
+	c.Assert(err, checker.NotNil, check.Commentf("container should fail to exec new conmmand if it is paused"))
 
 	expected := ContainerID + " is paused, unpause the container before exec"
 	c.Assert(out, checker.Contains, expected, check.Commentf("container should not exec new command if it is paused"))
@@ -207,7 +210,6 @@ func (s *DockerSuite) TestExecTTYWithoutStdin(c *check.C) {
 	}
 }
 
-// FIXME(vdemeester) this should be a unit tests on cli/command/container package
 func (s *DockerSuite) TestExecParseError(c *check.C) {
 	// TODO Windows CI: Requires some extra work. Consider copying the
 	// runSleepingContainer helper to have an exec version.
@@ -215,11 +217,10 @@ func (s *DockerSuite) TestExecParseError(c *check.C) {
 	dockerCmd(c, "run", "-d", "--name", "top", "busybox", "top")
 
 	// Test normal (non-detached) case first
-	icmd.RunCommand(dockerBinary, "exec", "top").Assert(c, icmd.Expected{
-		ExitCode: 1,
-		Error:    "exit status 1",
-		Err:      "See 'docker exec --help'",
-	})
+	cmd := exec.Command(dockerBinary, "exec", "top")
+	_, stderr, _, err := runCommandWithStdoutStderr(cmd)
+	c.Assert(err, checker.NotNil)
+	c.Assert(stderr, checker.Contains, "See 'docker exec --help'")
 }
 
 func (s *DockerSuite) TestExecStopNotHanging(c *check.C) {
@@ -356,15 +357,14 @@ func (s *DockerSuite) TestExecInspectID(c *check.C) {
 	}
 
 	// But we should still be able to query the execID
-	sc, body, _ := request.SockRequest("GET", "/exec/"+execID+"/json", nil, daemonHost())
-
+	sc, body, err := sockRequest("GET", "/exec/"+execID+"/json", nil)
 	c.Assert(sc, checker.Equals, http.StatusOK, check.Commentf("received status != 200 OK: %d\n%s", sc, body))
 
 	// Now delete the container and then an 'inspect' on the exec should
 	// result in a 404 (not 'container not running')
 	out, ec := dockerCmd(c, "rm", "-f", id)
 	c.Assert(ec, checker.Equals, 0, check.Commentf("error removing container: %s", out))
-	sc, body, _ = request.SockRequest("GET", "/exec/"+execID+"/json", nil, daemonHost())
+	sc, body, err = sockRequest("GET", "/exec/"+execID+"/json", nil)
 	c.Assert(sc, checker.Equals, http.StatusNotFound, check.Commentf("received status != 404: %d\n%s", sc, body))
 }
 
@@ -388,9 +388,10 @@ func (s *DockerSuite) TestRunMutableNetworkFiles(c *check.C) {
 	// Not applicable on Windows to Windows CI.
 	testRequires(c, SameHostDaemon, DaemonIsLinux)
 	for _, fn := range []string{"resolv.conf", "hosts"} {
-		deleteAllContainers(c)
+		deleteAllContainers()
 
-		content := runCommandAndReadContainerFile(c, fn, dockerBinary, "run", "-d", "--name", "c1", "busybox", "sh", "-c", fmt.Sprintf("echo success >/etc/%s && top", fn))
+		content, err := runCommandAndReadContainerFile(fn, exec.Command(dockerBinary, "run", "-d", "--name", "c1", "busybox", "sh", "-c", fmt.Sprintf("echo success >/etc/%s && top", fn)))
+		c.Assert(err, checker.IsNil)
 
 		c.Assert(strings.TrimSpace(string(content)), checker.Equals, "success", check.Commentf("Content was not what was modified in the container", string(content)))
 
@@ -442,27 +443,30 @@ func (s *DockerSuite) TestExecWithPrivileged(c *check.C) {
 	dockerCmd(c, "run", "-d", "--name", "parent", "--cap-drop=ALL", "busybox", "sh", "-c", `while (true); do if [ -e /exec_priv ]; then cat /exec_priv && mknod /tmp/sda b 8 0 && echo "Success"; else echo "Privileged exec has not run yet"; fi; usleep 10000; done`)
 
 	// Check exec mknod doesn't work
-	icmd.RunCommand(dockerBinary, "exec", "parent", "sh", "-c", "mknod /tmp/sdb b 8 16").Assert(c, icmd.Expected{
-		ExitCode: 1,
-		Err:      "Operation not permitted",
-	})
+	cmd := exec.Command(dockerBinary, "exec", "parent", "sh", "-c", "mknod /tmp/sdb b 8 16")
+	out, _, err := runCommandWithOutput(cmd)
+	c.Assert(err, checker.NotNil, check.Commentf("exec mknod in --cap-drop=ALL container without --privileged should fail"))
+	c.Assert(out, checker.Contains, "Operation not permitted", check.Commentf("exec mknod in --cap-drop=ALL container without --privileged should fail"))
 
 	// Check exec mknod does work with --privileged
-	result := icmd.RunCommand(dockerBinary, "exec", "--privileged", "parent", "sh", "-c", `echo "Running exec --privileged" > /exec_priv && mknod /tmp/sdb b 8 16 && usleep 50000 && echo "Finished exec --privileged" > /exec_priv && echo ok`)
-	result.Assert(c, icmd.Success)
+	cmd = exec.Command(dockerBinary, "exec", "--privileged", "parent", "sh", "-c", `echo "Running exec --privileged" > /exec_priv && mknod /tmp/sdb b 8 16 && usleep 50000 && echo "Finished exec --privileged" > /exec_priv && echo ok`)
+	out, _, err = runCommandWithOutput(cmd)
+	c.Assert(err, checker.IsNil)
 
-	actual := strings.TrimSpace(result.Combined())
-	c.Assert(actual, checker.Equals, "ok", check.Commentf("exec mknod in --cap-drop=ALL container with --privileged failed, output: %q", result.Combined()))
+	actual := strings.TrimSpace(out)
+	c.Assert(actual, checker.Equals, "ok", check.Commentf("exec mknod in --cap-drop=ALL container with --privileged failed, output: %q", out))
 
 	// Check subsequent unprivileged exec cannot mknod
-	icmd.RunCommand(dockerBinary, "exec", "parent", "sh", "-c", "mknod /tmp/sdc b 8 32").Assert(c, icmd.Expected{
-		ExitCode: 1,
-		Err:      "Operation not permitted",
-	})
+	cmd = exec.Command(dockerBinary, "exec", "parent", "sh", "-c", "mknod /tmp/sdc b 8 32")
+	out, _, err = runCommandWithOutput(cmd)
+	c.Assert(err, checker.NotNil, check.Commentf("repeating exec mknod in --cap-drop=ALL container after --privileged without --privileged should fail"))
+	c.Assert(out, checker.Contains, "Operation not permitted", check.Commentf("repeating exec mknod in --cap-drop=ALL container after --privileged without --privileged should fail"))
+
 	// Confirm at no point was mknod allowed
-	result = icmd.RunCommand(dockerBinary, "logs", "parent")
-	result.Assert(c, icmd.Success)
-	c.Assert(result.Combined(), checker.Not(checker.Contains), "Success")
+	logCmd := exec.Command(dockerBinary, "logs", "parent")
+	out, _, err = runCommandWithOutput(logCmd)
+	c.Assert(err, checker.IsNil)
+	c.Assert(out, checker.Not(checker.Contains), "Success")
 
 }
 
@@ -470,9 +474,13 @@ func (s *DockerSuite) TestExecWithImageUser(c *check.C) {
 	// Not applicable on Windows
 	testRequires(c, DaemonIsLinux)
 	name := "testbuilduser"
-	buildImageSuccessfully(c, name, withDockerfile(`FROM busybox
+	_, err := buildImage(name,
+		`FROM busybox
 		RUN echo 'dockerio:x:1001:1001::/bin:/bin/false' >> /etc/passwd
-		USER dockerio`))
+		USER dockerio`,
+		true)
+	c.Assert(err, checker.IsNil)
+
 	dockerCmd(c, "run", "-d", "--name", "dockerioexec", name, "top")
 
 	out, _ := dockerCmd(c, "exec", "dockerioexec", "whoami")

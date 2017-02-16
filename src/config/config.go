@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"strings"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 )
@@ -82,11 +83,17 @@ func setLogLevel(logLevel string) {
 	}
 }
 
+func setTimeZone() {
+	time.FixedZone("+8", 8)
+	log.Debugf("Setting TimeZone +8, Now: [%v]", time.Now())
+}
+
 func LoadConfig() (*Config, error) {
 	conf, err := ReadConfig()
 	if err != nil {
 		return nil, err
 	}
 	setLogLevel(conf.LogLevel)
+	setTimeZone()
 	return conf, nil
 }

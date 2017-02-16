@@ -336,10 +336,12 @@ func (a *Agent) handleSessionMessage(ctx context.Context, message *api.SessionMe
 	seen := map[api.Peer]struct{}{}
 	for _, manager := range message.Managers {
 		if manager.Peer.Addr == "" {
+			log.G(ctx).WithField("manager.addr", manager.Peer.Addr).
+				Warnf("skipping bad manager address")
 			continue
 		}
 
-		a.config.ConnBroker.Remotes().Observe(*manager.Peer, int(manager.Weight))
+		a.config.Managers.Observe(*manager.Peer, int(manager.Weight))
 		seen[*manager.Peer] = struct{}{}
 	}
 
@@ -356,9 +358,9 @@ func (a *Agent) handleSessionMessage(ctx context.Context, message *api.SessionMe
 	}
 
 	// prune managers not in list.
-	for peer := range a.config.ConnBroker.Remotes().Weights() {
+	for peer := range a.config.Managers.Weights() {
 		if _, ok := seen[peer]; !ok {
-			a.config.ConnBroker.Remotes().Remove(peer)
+			a.config.Managers.Remove(peer)
 		}
 	}
 
@@ -466,7 +468,7 @@ func (a *Agent) Publisher(ctx context.Context, subscriptionID string) (exec.LogP
 	)
 
 	err = a.withSession(ctx, func(session *session) error {
-		publisher, err = api.NewLogBrokerClient(session.conn.ClientConn).PublishLogs(ctx)
+		publisher, err = api.NewLogBrokerClient(session.conn).PublishLogs(ctx)
 		return err
 	})
 	if err != nil {
@@ -501,7 +503,7 @@ func (a *Agent) nodeDescriptionWithHostname(ctx context.Context) (*api.NodeDescr
 	return desc, err
 }
 
-// nodesEqual returns true if the node states are functionally equal, ignoring status,
+// nodesEqual returns true if the node states are functionaly equal, ignoring status,
 // version and other superfluous fields.
 //
 // This used to decide whether or not to propagate a node update to executor.

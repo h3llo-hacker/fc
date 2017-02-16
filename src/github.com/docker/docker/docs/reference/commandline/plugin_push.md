@@ -14,13 +14,12 @@ keywords: "plugin, push"
 -->
 
 ```markdown
-Usage:	docker plugin push [OPTIONS] PLUGIN[:TAG]
+Usage:  docker plugin push [OPTIONS] PLUGIN[:TAG]
 
 Push a plugin to a registry
 
 Options:
-      --disable-content-trust   Skip image signing (default true)
-      --help                    Print usage
+      --help       Print usage
 ```
 
 Use `docker plugin create` to create the plugin. Once the plugin is ready for distribution,

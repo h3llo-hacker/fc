@@ -11,7 +11,7 @@ import (
 	"github.com/bitly/go-simplejson"
 )
 
-func TaobaoIP2Region(ip string) (string, error) {
+func taobaoIP2Region(ip string) (string, error) {
 	Region := ""
 	URL := "http://ip.taobao.com/service/getIpInfo.php?ip=" + ip
 	client := &http.Client{
@@ -42,7 +42,7 @@ func TaobaoIP2Region(ip string) (string, error) {
 	return Region, nil
 }
 
-func BaiduIP2Region(ip string) (string, error) {
+func baiduIP2Region(ip string) (string, error) {
 	// 'https://sp1.baidu.com/8aQDcjqpAAV3otqbppnN2DJv/api.php?query=60.117.48.212&resource_id=6006&ie=utf8&oe=utf8&format=json'
 	var err error
 	region := &simplejson.Json{}
@@ -72,7 +72,7 @@ func BaiduIP2Region(ip string) (string, error) {
 	return r, nil
 }
 
-func OpenGPSIP2Region(ip string) (string, error) {
+func openGPSIP2Region(ip string) (string, error) {
 	Region := ""
 	URL := "https://www.opengps.cn/Data/IP/IPLocHiAcc.ashx"
 	client := &http.Client{
@@ -105,7 +105,7 @@ func IP2Region(ip string) string {
 	defer close(ch)
 
 	go func(ch chan string) {
-		r, err := OpenGPSIP2Region(ip)
+		r, err := openGPSIP2Region(ip)
 		if err != nil {
 			ch <- ""
 			return
@@ -114,7 +114,7 @@ func IP2Region(ip string) string {
 	}(ch)
 
 	go func(ch chan string) {
-		r, err := BaiduIP2Region(ip)
+		r, err := baiduIP2Region(ip)
 		if err != nil {
 			ch <- ""
 			return
@@ -123,7 +123,7 @@ func IP2Region(ip string) string {
 	}(ch)
 
 	go func(ch chan string) {
-		r, err := TaobaoIP2Region(ip)
+		r, err := taobaoIP2Region(ip)
 		if err != nil {
 			ch <- ""
 			return

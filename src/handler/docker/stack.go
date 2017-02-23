@@ -3,13 +3,13 @@ package docker
 import (
 	"bytes"
 	"config"
-	"errors"
 	"fmt"
 	"os/exec"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/swarm"
 	"github.com/docker/docker/cli/compose/convert"
 	"golang.org/x/net/context"
 )
@@ -65,21 +65,23 @@ func DeployStack(endpoint, composeFile, stackName string) (string, error) {
 	// docker -H <host> stack deploy -c test-docker-compose.yml nginx
 	if !config.PathExist(composeFile) {
 		return "",
-			errors.New("compose file [" + composeFile + "] not found")
+			fmt.Errorf("compose file [" + composeFile + "] not found")
 	}
 
-	cmd := exec.Command("docker", "-H",
-		endpoint, "stack", "deploy", "-c",
-		composeFile, stackName)
+	command := fmt.Sprintf("docker -H %s stack deploy -c %s %s",
+		endpoint, composeFile, stackName)
+	log.Debugf("exec command [%v]", command)
+	cmd := exec.Command("docker", "-H", endpoint, "stack", "deploy", "-c", composeFile, stackName)
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
+	logs := out.String()
 	if err != nil {
 		log.Errorf("Deploy stack [%v] error: [%v]",
 			stackName, err)
+		return logs, err
 	}
-	logs := out.String()
 	return logs, nil
 }
 
@@ -97,4 +99,24 @@ func RemoveStack(endpoint, stackName string) error {
 		return err
 	}
 	return nil
+}
+
+func PsStack(endpoint, namespace string) ([]swarm.Task, error) {
+	filter := filters.NewArgs()
+	filter.Add("label", convert.LabelNamespace+"="+namespace)
+	client, err := DockerCli(endpoint)
+	if err != nil {
+		return nil, err
+	}
+	tasks, err := client.TaskList(context.Background(),
+		types.TaskListOptions{Filters: filter})
+	if err != nil {
+		return nil, err
+	}
+
+	if len(tasks) == 0 {
+		return nil, fmt.Errorf("Nothing found in stack: %s\n", namespace)
+	}
+
+	return tasks, nil
 }

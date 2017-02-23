@@ -5,11 +5,6 @@ type Port struct {
 	Dst int
 }
 
-type Time_struct struct {
-	CreateTime int
-	FinishTime int
-}
-
 type Service struct {
 	ID           string
 	BelongToUser string

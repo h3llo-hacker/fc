@@ -26,11 +26,11 @@ type Register_struct struct {
 }
 
 type UserChallenge struct {
-	ChallengeID string `bson:"ChallengeID"`
-	TemplateID  string `bson:"TemplateID"`
-	Flag        string `bson:"Flag"`
-	FinishTime  int    `bson:"FinishTime"`
-	CreateTime  int    `bson:"CreateTime"`
+	ChallengeID string    `bson:"ChallengeID"`
+	TemplateID  string    `bson:"TemplateID"`
+	Flag        string    `bson:"Flag"`
+	FinishTime  time.Time `bson:"FinishTime"`
+	CreateTime  time.Time `bson:"CreateTime"`
 }
 
 type Challenge_types struct {

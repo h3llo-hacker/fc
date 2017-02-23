@@ -28,10 +28,8 @@ func Router(router *gin.Engine) {
 	// Ping
 	router.GET("/ping", Ping)
 
-	// Users
-	router.GET("/users", users)
-
 	// User
+	router.GET("/users", users)
 	userGroup := router.Group("/user")
 	{
 		userGroup.POST("/login", userLogin)
@@ -50,6 +48,15 @@ func Router(router *gin.Engine) {
 
 	// Challenges
 	router.GET("/challenges", challenges)
+
+	// templates
+	templateGroup := router.Group("/templates")
+	{
+		templateGroup.GET("/", templates)
+		templateGroup.GET("/:templateID", templateQuery)
+		templateGroup.POST("/create", templateCreate)
+		templateGroup.DELETE("/delete", templateRemove)
+	}
 
 	// list all services
 	router.GET("/services", listServices)

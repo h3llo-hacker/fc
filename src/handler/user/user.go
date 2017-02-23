@@ -19,6 +19,8 @@ import (
 
 type User types.User
 
+const C = "user"
+
 func AddUser(user types.User) error {
 	if err := user.ValidateUser(); err != nil {
 		return err
@@ -32,7 +34,7 @@ func AddUser(user types.User) error {
 	user.UserURL = generateURL(user.UserName, user.UserNum)
 	user.IsActive = false
 
-	err := db.MongoInsert("user", user)
+	err := db.MongoInsert(C, user)
 	if err != nil {
 		log.Errorf("MongoInsert Error %v", err)
 		return err
@@ -60,7 +62,6 @@ func (user *User) RmUser() error {
 	if !emailAddrExist(user.EmailAddress) {
 		return errors.New("User Email Not Found")
 	}
-	C := "user"
 	query := bson.M{"EmailAddress": user.EmailAddress}
 	err := db.MongoRemove(C, query)
 	if err != nil {
@@ -71,7 +72,6 @@ func (user *User) RmUser() error {
 }
 
 func (user *User) UpdateUser(update bson.M) error {
-	C := "user"
 	e := bson.M{"EmailAddress": user.EmailAddress}
 	u := bson.M{"UserURL": user.UserURL}
 	i := bson.M{"UserID": user.UserID}
@@ -87,7 +87,6 @@ func (user *User) QueryUser(items []string) ([]types.User, error) {
 	var (
 		users []types.User
 		query = bson.M{}
-		C     = "user"
 	)
 	e := bson.M{"EmailAddress": user.EmailAddress}
 	i := bson.M{"UserID": user.UserID}
@@ -114,7 +113,6 @@ func (user *User) QueryUserRaw(items []string) ([]interface{}, error) {
 	var (
 		userMap []interface{}
 		query   = bson.M{}
-		C       = "user"
 	)
 	if valid.IsEmail(user.EmailAddress) {
 		query = bson.M{"EmailAddress": user.EmailAddress}
@@ -142,7 +140,6 @@ func (user *User) QueryUserRaw(items []string) ([]interface{}, error) {
 }
 
 func emailAddrExist(emailAddr string) bool {
-	C := "user"
 	query := bson.M{"EmailAddress": emailAddr}
 	users, _ := db.MongoFind(C, query, bson.M{"_id": 1})
 	if len(users) == 0 {
@@ -152,7 +149,6 @@ func emailAddrExist(emailAddr string) bool {
 }
 
 func userUrlExist(userUrl string) bool {
-	C := "user"
 	query := bson.M{"UserURL": userUrl}
 	users, _ := db.MongoFind(C, query, bson.M{"_id": 1})
 	if len(users) == 0 {
@@ -162,7 +158,6 @@ func userUrlExist(userUrl string) bool {
 }
 
 func getUserNum() int {
-	C := "user"
 	num, err := db.MongoCount(C)
 	if err != nil {
 		return 0
@@ -186,7 +181,9 @@ func generateURL(userName string, userNum int) string {
 }
 
 func GetUserID(str, t string) (string, error) {
+	var users []types.User
 	query := bson.M{}
+
 	switch strings.ToLower(t) {
 	case "email":
 		query = bson.M{"EmailAddress": str}
@@ -195,9 +192,9 @@ func GetUserID(str, t string) (string, error) {
 	case "num":
 		query = bson.M{"UserNum": str}
 	}
-	C := "user"
-	var users []types.User
+
 	db.MongoFindUsers(C, query, bson.M{}, &users)
+
 	switch len(users) {
 	case 0:
 		return "", errors.New("404")
@@ -213,7 +210,7 @@ func updateUserRegion(uid, region string) error {
 	set := bson.M{"Register.Region": region}
 	update := bson.M{"$set": set}
 	query := bson.M{"UserID": uid}
-	err := db.MongoUpdate("user", query, update)
+	err := db.MongoUpdate(C, query, update)
 	if err != nil {
 		return err
 	}
@@ -244,7 +241,7 @@ func (user *User) UpdateUserLogin(login types.Register_struct) error {
 	}
 	loginTimes := u[0].(bson.M)["Login"].(bson.M)["LoginTimes"].(int)
 	if loginTimes > 20 {
-		update := bson.M{"$pop": bson.M{"Login.LastLogins": -1}}
+		update := bson.M{"$pull": bson.M{"Login.LastLogins": -1}}
 		user.UpdateUser(update)
 	}
 	return nil

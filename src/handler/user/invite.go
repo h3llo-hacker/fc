@@ -35,7 +35,6 @@ func GetInvitedBy(inviteCode string) (string, error) {
 		return "invite_off", nil
 	}
 
-	C := "user"
 	query := bson.M{"Invite.InviteCodes": inviteCode}
 	selector := bson.M{}
 	selector["UserID"] = 1

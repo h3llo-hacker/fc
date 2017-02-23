@@ -3,18 +3,16 @@ package routes
 import (
 	"config"
 	"handler/docker"
-	db "utils/db"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/gin-gonic/gin"
-	"gopkg.in/mgo.v2/bson"
 )
 
 func Router(router *gin.Engine) {
 
 	router.GET("/", func(c *gin.Context) {
 		auth, err := c.Cookie("Auth")
-		if err != nil || !valiedAuth(auth) {
+		if err != nil || !validateAuth(auth) {
 			c.JSON(401, gin.H{
 				"err": "Auth Failed.",
 			})
@@ -48,11 +46,16 @@ func Router(router *gin.Engine) {
 
 	// Challenges
 	router.GET("/challenges", challenges)
+	challengeGroup := router.Group("/challenge")
+	{
+		challengeGroup.GET("/:challengeID", challengeInfo)
+		challengeGroup.POST("/create", challengeCreate)
+	}
 
 	// templates
-	templateGroup := router.Group("/templates")
+	router.GET("/templates", templates)
+	templateGroup := router.Group("/template")
 	{
-		templateGroup.GET("/", templates)
 		templateGroup.GET("/:templateID", templateQuery)
 		templateGroup.POST("/create", templateCreate)
 		templateGroup.DELETE("/delete", templateRemove)
@@ -110,19 +113,4 @@ func getServiceStatus(c *gin.Context) {
 	} else {
 		log.Error(err)
 	}
-}
-
-func valiedAuth(auth string) bool {
-	C := "auth"
-	selector := bson.M{}
-	auths, err := db.MongoFind(C, nil, selector)
-	if err != nil {
-		return false
-	}
-	for _, Auth := range auths {
-		if auth == Auth.(bson.M)["token"] {
-			return true
-		}
-	}
-	return false
 }

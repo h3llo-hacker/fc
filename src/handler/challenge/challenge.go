@@ -20,11 +20,15 @@ const (
 	C = "challenges"
 )
 
-func CreateChallenge(userID, templateID string) (string, error) {
-	uid, _ := uuid.NewV4()
-	challengeID := fmt.Sprintf("%v", uid)
+func CreateChallenge(userID, templateID, challengeID string) (string, error) {
+	if challengeID == "" {
+		uid, _ := uuid.NewV4()
+		challengeID = fmt.Sprintf("%v", uid)
+	}
 	flag := utils.RandomFlag()
 	now := time.Now()
+
+	log.Debugf("Creating challenge [%v], flag is [%v]", challengeID, flag)
 
 	ts, err := template.QueryTemplate(templateID)
 	if err != nil {
@@ -32,22 +36,7 @@ func CreateChallenge(userID, templateID string) (string, error) {
 	}
 	t := ts[0]
 
-	composeFile, err := template.GenerateComposeFile(templateID, flag)
-	if err != nil {
-		return challengeID, err
-	}
-	log.Debugln(composeFile)
-	endpoint := config.Conf.Endpoints[0]
-	stackName := challengeID
-	deploylogs, err := docker.DeployStack(endpoint, composeFile,
-		stackName)
-	if err != nil {
-		return challengeID, err
-	}
-	log.Infof("Deploy Stack [%v] OK, logs: [%v]",
-		stackName, deploylogs)
-
-	// update database
+	// update database first
 	challenge := types.Challenge{
 		ID:         challengeID,
 		Name:       t.Name,
@@ -58,6 +47,7 @@ func CreateChallenge(userID, templateID string) (string, error) {
 		Time: types.Time_struct{
 			CreateTime: now,
 		},
+		State: "creating",
 	}
 	userChallenge := types.UserChallenge{
 		ChallengeID: challengeID,
@@ -70,6 +60,22 @@ func CreateChallenge(userID, templateID string) (string, error) {
 	if err != nil {
 		return challengeID, err
 	}
+
+	// generate a compose file with the given flag
+	composeFile, err := template.GenerateComposeFile(templateID, flag)
+	if err != nil {
+		return challengeID, err
+	}
+	log.Debugln(composeFile)
+	endpoint := config.Conf.Endpoints[0]
+	stackName := challengeID
+	deploylogs, err := docker.DeployStack(endpoint, composeFile,
+		stackName)
+	if err != nil {
+		return challengeID, err
+	}
+	log.Debugf("Deploy Stack [%v] OK, logs: [%v]",
+		stackName, deploylogs)
 
 	// update user
 	var user U.User
@@ -98,6 +104,11 @@ func QueryChallenges(challengeID string) ([]types.Challenge, error) {
 	err = collection.Find(query).Select(nil).All(&challenges)
 	if err != nil {
 		return nil, err
+	}
+
+	if len(challenges) == 0 {
+		return nil, fmt.Errorf("Challenge [%v] Not Found!",
+			challengeID)
 	}
 
 	return challenges, nil
@@ -165,4 +176,13 @@ func getInprocessChallenges(user U.User, challengeID string) (types.UserChalleng
 		}
 	}
 	return types.UserChallenge{}, nil
+}
+
+func UpdateChallengeState(challengeID, state string) {
+	selector := bson.M{"ID": challengeID}
+	update := bson.M{"$set": bson.M{"State": state}}
+	err := db.MongoUpdate(C, selector, update)
+	if err != nil {
+		log.Errorf("UpdateChallengeState Error: [%v]", err)
+	}
 }

@@ -246,3 +246,12 @@ func (user *User) UpdateUserLogin(login types.Register_struct) error {
 	}
 	return nil
 }
+
+func ExistUser(uid string) bool {
+	query := bson.M{"UserID": uid}
+	users, _ := db.MongoFind(C, query, bson.M{"_id": 1})
+	if len(users) == 0 {
+		return false
+	}
+	return true
+}

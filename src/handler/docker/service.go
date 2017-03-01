@@ -41,7 +41,7 @@ func InspectService(serviceID string) (swarm.Service, error) {
 	var S swarm.Service
 	var E error
 	for _, endpoint := range config.Conf.Endpoints {
-		log.Info(fmt.Sprintf("Get Service [ %s ]", serviceID))
+		log.Debugf(fmt.Sprintf("Get Service [ %s ]", serviceID))
 		cli, err := DockerCli(endpoint)
 		if err != nil {
 			log.Error(err)

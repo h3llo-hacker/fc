@@ -1,14 +1,24 @@
 package types
 
+import (
+	"time"
+)
+
+type Time_struct struct {
+	CreateTime time.Time `bson:"CreateTime"`
+	FinishTime time.Time `bson:"FinishTime"`
+}
+
 type Challenge struct {
-	ID         string
-	Name       string
-	TemplateID string
-	Flag       string
-	Services   []string
-	NetworkID  string
-	UserID     string
-	Time       Time_struct
+	ID         string      `bson:"ID"`
+	Name       string      `bson:"Name"`
+	TemplateID string      `bson:"TemplateID"`
+	Flag       string      `bson:"Flag"`
+	StackID    string      `bson:"StackID"`
+	UserID     string      `bson:"UserID"`
+	Time       Time_struct `bson:"Time"`
+	State      string      `bson:"State"`
+	// creating, terminated, failed, created
 }
 
 /*

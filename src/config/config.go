@@ -10,19 +10,20 @@ import (
 )
 
 type MongoDB_Conf struct {
-	Host string
-	Port string
-	User string
-	Pass string
-	DB   string
+	Host string `json:"Host"`
+	Port string `json:"Port"`
+	User string `json:"User"`
+	Pass string `json:"Pass"`
+	DB   string `json:"DB"`
 }
 
 type Config struct {
-	Endpoints   []string
-	MongoDB     MongoDB_Conf
-	LogLevel    string
-	SendGridKey string
-	InviteMode  bool
+	Endpoints       []string `json:"Endpoints"`
+	MongoDB         MongoDB_Conf
+	LogLevel        string `json:"LogLevel"`
+	SendGridKey     string `json:"SendGridKey"`
+	InviteMode      bool   `json:"InviteMode"`
+	ComposeFilePath string `json:"ComposeFilePath"`
 }
 
 var Conf Config

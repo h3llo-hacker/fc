@@ -87,13 +87,13 @@ func userInfo(c *gin.Context) {
 		UserURL: c.Param("userURL"),
 	}
 	items := []string{"UserName", "UserURL", "EmailAddress", "WebSite", "Intro"}
-	users, err := user.QueryUserRaw(items)
+	quser, err := user.QueryUserRaw(items)
 	if err != nil {
 		c.JSON(404, gin.H{
 			"err": err.Error(),
 		})
 	} else {
-		c.JSON(200, users[0].(bson.M))
+		c.JSON(200, quser.(bson.M))
 	}
 }
 
@@ -101,32 +101,39 @@ func userChallenges(c *gin.Context) {
 	user := U.User{
 		UserURL: c.Param("userURL"),
 	}
-	items := []string{"Challenges"}
-	challengeType := c.Query("type")
-	users, err := user.QueryUser(items)
+	var challengeState string
+
+	cType := c.Query("type")
+	switch cType {
+	case "0": // failed
+		challengeState = "failed"
+	case "1": // terminated
+		challengeState = "terminated"
+	case "2": // running
+		challengeState = "running"
+	default:
+		challengeState = "all"
+	}
+
+	selector := bson.M{"Challenges": 1}
+	quser, err := user.QueryUserWithSelector(selector)
 	if err != nil {
 		c.JSON(500, gin.H{
 			"err": err.Error(),
 		})
 		return
 	}
-	switch challengeType {
-	case "0": // Failed
-		c.JSON(200, gin.H{
-			"challenges": users[0].Challenges.Failed,
-		})
-	case "1": // Finished
-		c.JSON(200, gin.H{
-			"challenges": users[0].Challenges.Finished,
-		})
-	case "2": // InProcess
-		c.JSON(200, gin.H{
-			"challenges": users[0].Challenges.Finished,
-		})
-	default:
-		c.JSON(200, gin.H{
-			"challenges": users[0].Challenges,
-		})
+	challenges := quser.Challenges
+	if challengeState != "all" {
+		var returnChallenges []types.UserChallenge
+		for _, c := range challenges {
+			if c.State == challengeState {
+				returnChallenges = append(returnChallenges, c)
+			}
+		}
+		c.JSON(200, returnChallenges)
+	} else {
+		c.JSON(200, challenges)
 	}
 }
 
@@ -135,14 +142,14 @@ func userFollowers(c *gin.Context) {
 		UserURL: c.Param("userURL"),
 	}
 	items := []string{"Followers"}
-	users, err := user.QueryUser(items)
+	quser, err := user.QueryUser(items)
 	if err != nil {
 		c.JSON(500, gin.H{
 			"err": err,
 		})
 	} else {
 		c.JSON(200, gin.H{
-			"followers": users[0].Followers,
+			"followers": quser.Followers,
 		})
 	}
 }
@@ -152,14 +159,14 @@ func userFollowees(c *gin.Context) {
 		UserURL: c.Param("userURL"),
 	}
 	items := []string{"Followees"}
-	users, err := user.QueryUser(items)
+	quser, err := user.QueryUser(items)
 	if err != nil {
 		c.JSON(500, gin.H{
 			"err": err,
 		})
 	} else {
 		c.JSON(200, gin.H{
-			"followers": users[0].Following,
+			"followers": quser.Following,
 		})
 	}
 }

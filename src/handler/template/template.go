@@ -102,7 +102,7 @@ func GenerateComposeFile(templateID, flag string) (string, error) {
 	return templateFilePath, nil
 }
 
-func ValidateTemplate(templateID string) bool {
+func TemplateExist(templateID string) bool {
 	query := bson.M{"ID": templateID}
 	ts, _ := db.MongoFind(C, query, bson.M{"_id": 1})
 	if len(ts) == 0 {

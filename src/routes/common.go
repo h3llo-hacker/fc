@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"handler/challenge"
 	"handler/template"
 	"handler/user"
 	db "utils/db"
@@ -31,9 +32,17 @@ func validateAuth(auth string) bool {
 }
 
 func validateUser(uid string) bool {
-	return user.ExistUser(uid)
+	return user.UserExist(uid)
 }
 
 func validateTemplate(templateID string) bool {
-	return template.ValidateTemplate(templateID)
+	return template.TemplateExist(templateID)
+}
+
+func validateChallenge(challengeID string) bool {
+	return challenge.ChallengeExist(challengeID)
+}
+
+func validateFlag(flag, challengeID string) bool {
+	return challenge.ValidateFlag(flag, challengeID)
 }

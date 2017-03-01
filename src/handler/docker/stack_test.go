@@ -33,7 +33,7 @@ func Test_ListStacks(t *testing.T) {
 
 func Test_PsStack(t *testing.T) {
 	endpoint := "127.0.0.1:2374"
-	stackName := "nginx"
+	stackName := "3c0ef85b-8201-49d9-5c06-6b486694a903"
 	t.Log(time.Now())
 	tasks, err := PsStack(endpoint, stackName)
 	if err != nil {

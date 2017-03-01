@@ -25,18 +25,20 @@ type Register_struct struct {
 	Date   time.Time     `bson:"Date"` // MongoDB is ISODate (UTC)
 }
 
-type UserChallenge struct {
-	ChallengeID string    `bson:"ChallengeID"`
-	TemplateID  string    `bson:"TemplateID"`
-	Flag        string    `bson:"Flag"`
-	FinishTime  time.Time `bson:"FinishTime"`
-	CreateTime  time.Time `bson:"CreateTime"`
+type Service_struct struct {
+	ServiceName   string `bson:"ServiceName"`
+	TargetPort    int    `bson:"TargetPort"`
+	PublishedPort int    `bson:"PublishedPort"`
 }
 
-type Challenge_types struct {
-	Failed    []UserChallenge `bson:"Failed"`
-	Finished  []UserChallenge `bson:"Finished"`
-	InProcess []UserChallenge `bson:"InProcess"`
+type UserChallenge struct {
+	ChallengeID string           `bson:"ChallengeID"`
+	TemplateID  string           `bson:"TemplateID"`
+	Flag        string           `bson:"Flag"`
+	FinishTime  time.Time        `bson:"FinishTime"`
+	CreateTime  time.Time        `bson:"CreateTime"`
+	State       string           `bson:"State"`
+	Services    []Service_struct `bson:"Services"`
 }
 
 type Login_struct struct {
@@ -51,7 +53,7 @@ type User struct {
 	Password     string          `bson:"Password"`
 	Intro        string          `bson:"Intro"`
 	EmailAddress string          `bson:"EmailAddress",valid:"email"`
-	Challenges   Challenge_types `bson:"Challenges"`
+	Challenges   []UserChallenge `bson:"Challenges"`
 	Following    []string        `bson:"Following"`
 	Followers    []string        `bson:"Followers"`
 	Login        Login_struct    `bson:"Login"`

@@ -2,14 +2,14 @@ package routes
 
 import (
 	"fmt"
-	Challenge "handler/challenge"
+	"handler/challenge"
 
 	"github.com/gin-gonic/gin"
 	"github.com/nu7hatch/gouuid"
 )
 
 func challenges(c *gin.Context) {
-	challenges, err := Challenge.QueryChallenges("all")
+	challenges, err := challenge.AllChallenges()
 	if err != nil {
 		c.JSON(500, gin.H{
 			"err": err.Error(),
@@ -21,13 +21,13 @@ func challenges(c *gin.Context) {
 
 func challengeInfo(c *gin.Context) {
 	cid := c.Param("challengeID")
-	challenges, err := Challenge.QueryChallenges(cid)
+	challenge, err := challenge.QueryChallenge(cid)
 	if err != nil {
 		c.JSON(500, gin.H{
 			"err": err.Error(),
 		})
 	} else {
-		c.JSON(200, challenges[0])
+		c.JSON(200, challenge)
 	}
 }
 
@@ -53,15 +53,45 @@ func challengeCreate(c *gin.Context) {
 	challengeID := fmt.Sprintf("%v", uid)
 
 	go func() {
-		_, err := Challenge.CreateChallenge(userID,
+		_, err := challenge.CreateChallenge(userID,
 			templateID, challengeID)
 		if err != nil {
-			Challenge.UpdateChallengeState(challengeID, "failed")
+			challenge.UpdateChallengeState(challengeID, "failed")
 		} else {
-			Challenge.UpdateChallengeState(challengeID, "running")
+			challenge.UpdateChallengeState(challengeID, "created")
 		}
 	}()
 	c.JSON(201, gin.H{
-		"id": challengeID,
+		"challenge created": "ok",
+		"id":                challengeID,
+	})
+}
+
+func challengeRemove(c *gin.Context) {
+	uid := c.Request.PostFormValue("uid")
+	challengeID := c.Request.PostFormValue("cid")
+
+	if !validateUser(uid) {
+		c.JSON(500, gin.H{
+			"err": "uid: [" + uid + "] not found",
+		})
+		return
+	}
+	if !validateChallenge(challengeID) {
+		c.JSON(500, gin.H{
+			"err": "challengeID: [" + challengeID + "] not found",
+		})
+		return
+	}
+
+	err := challenge.RmChallenge(uid, challengeID)
+	if err != nil {
+		c.JSON(500, gin.H{
+			"err": err.Error(),
+		})
+		return
+	}
+	c.JSON(200, gin.H{
+		"remove challenge": "ok",
 	})
 }

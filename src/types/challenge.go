@@ -17,8 +17,8 @@ type Challenge struct {
 	StackID    string      `bson:"StackID"`
 	UserID     string      `bson:"UserID"`
 	Time       Time_struct `bson:"Time"`
-	// creating, terminated, failed, running
-	State string `bson:"State"`
+	State      string      `bson:"State"`
+	// creating, terminated, failed, created
 }
 
 /*

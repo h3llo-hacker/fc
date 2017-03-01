@@ -47,7 +47,7 @@ func TestAddUser(t *testing.T) {
 func TestQueryUserAll(t *testing.T) {
 	var user User
 	user.EmailAddress = ""
-	users, err := user.QueryUser(nil)
+	users, err := user.QueryUserAll(nil)
 	if err != nil {
 		t.Errorf("Query User Error: [%v]", err)
 	}
@@ -60,7 +60,7 @@ func TestQueryUserWithItem(t *testing.T) {
 	var user User
 	user.EmailAddress = "test@test.com"
 	items := []string{"UserID", "Username", "Password"}
-	users, err := user.QueryUser(items)
+	users, err := user.QueryUserAll(items)
 	if err != nil {
 		t.Errorf("Query User Error: [%v]", err)
 	}

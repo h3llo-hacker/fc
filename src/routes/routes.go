@@ -50,6 +50,7 @@ func Router(router *gin.Engine) {
 	{
 		challengeGroup.GET("/:challengeID", challengeInfo)
 		challengeGroup.POST("/create", challengeCreate)
+		challengeGroup.DELETE("/remove", challengeRemove)
 	}
 
 	// templates
@@ -58,7 +59,7 @@ func Router(router *gin.Engine) {
 	{
 		templateGroup.GET("/:templateID", templateQuery)
 		templateGroup.POST("/create", templateCreate)
-		templateGroup.DELETE("/delete", templateRemove)
+		templateGroup.DELETE("/remove", templateRemove)
 	}
 
 	// list all services

@@ -71,7 +71,7 @@ func CreateChallenge(userID, templateID, challengeID string) (string, error) {
 	log.Debugln(composeFile)
 
 	// deploy stack
-	endpoint := config.Conf.Endpoints[0]
+	endpoint := config.Conf.Endpoint
 	stackName := challengeID
 	deploylogs, err := docker.DeployStack(endpoint, composeFile,
 		stackName)
@@ -141,7 +141,7 @@ func RmChallenge(userID, challengeID string) error {
 	}
 
 	stackName := challengeID
-	endpoint := config.Conf.Endpoints[0]
+	endpoint := config.Conf.Endpoint
 	err = docker.RemoveStack(endpoint, stackName)
 	if err != nil {
 		return err
@@ -221,7 +221,7 @@ START:
 	// wait 20s for startup
 	time.Sleep(time.Second * 20)
 	// just get the first endpoint, maybe it's a bug
-	endpoint := config.Conf.Endpoints[0]
+	endpoint := config.Conf.Endpoint
 	namespace := challengeID
 	tasks, err := docker.PsStack(endpoint, namespace)
 	if err != nil {

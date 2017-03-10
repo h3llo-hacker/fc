@@ -33,11 +33,10 @@ func Router(router *gin.Engine) {
 		userGroup.POST("/login", userLogin)
 		userGroup.POST("/create", userCreate)
 		userGroup.DELETE("/delete", userDelete)
-		userGroup.POST("/update/:userURL", userUpdate)
-		userGroup.POST("/follow/:userURL", userFollow)
 		userGroup.GET("/:userURL", userInfo)
-		userGroup.GET("/:userURL/", userInfo)
 		userGroup.GET("/:userURL/info", userInfo)
+		userGroup.POST("/follow/:userURL", userFollow)
+		userGroup.POST("/update/:userURL", userUpdate)
 		userGroup.GET("/:userURL/challenges", userChallenges)
 		// challenges[?type=0/1/2]
 		userGroup.GET("/:userURL/followers", userFollowers)
@@ -74,13 +73,13 @@ func Router(router *gin.Engine) {
 }
 
 func listServices(c *gin.Context) {
-	for _, endpoint := range config.Conf.Endpoints {
-		services, err := docker.ListServices(endpoint)
-		if err == nil {
-			c.JSON(200, services)
-		} else {
-			log.Error(err)
-		}
+	endpoint := config.Conf.Endpoint
+	services, err := docker.ListServices(endpoint)
+	if err == nil {
+		c.JSON(200, services)
+	} else {
+		log.Error(err)
+		c.JSON(500, err)
 	}
 }
 

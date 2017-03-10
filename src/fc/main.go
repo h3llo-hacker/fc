@@ -2,12 +2,13 @@ package main
 
 import (
 	"config"
-	log "github.com/Sirupsen/logrus"
-	"github.com/gin-gonic/gin"
+	"encoding/json"
 	"net/http"
-	// "os"
 	"routes"
 	"time"
+
+	log "github.com/Sirupsen/logrus"
+	"github.com/gin-gonic/gin"
 )
 
 func main() {
@@ -20,7 +21,8 @@ func main() {
 		panic(err)
 	}
 
-	log.Debug("Swarmkit Endpoints: ", conf.Endpoints)
+	ccc, _ := json.Marshal(conf)
+	log.Debugln(string(ccc))
 
 	router := gin.Default()
 
@@ -38,5 +40,5 @@ func main() {
 	if err != nil {
 		log.Errorf("FC Error: %v", err)
 	}
-	log.Info("FC Exit 0.")
+	log.Info("FC Exit")
 }

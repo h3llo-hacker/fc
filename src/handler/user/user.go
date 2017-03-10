@@ -60,7 +60,8 @@ func AddUser(user types.User) error {
 
 func (user *User) RmUser() error {
 	if !emailAddrExist(user.EmailAddress) {
-		return errors.New("User Email Not Found")
+		return fmt.Errorf("User Email [%v] Not Found",
+			user.EmailAddress)
 	}
 	query := bson.M{"EmailAddress": user.EmailAddress}
 	err := db.MongoRemove(C, query)
@@ -290,9 +291,13 @@ func (user *User) CheckLogin() bool {
 	items := []string{"Password"}
 	u, err := user.QueryUser(items)
 	if err != nil {
+		log.Errorf("Query User Error: [%v]", err)
 		return false
 	}
-	if utils.Password(user.Password) == u.Password {
+	encPassword := utils.Password(user.Password)
+	// log.Debugf("password: [%v], encPassword: [%v], postPass: [%v]",
+	// u.Password, encPassword, user.Password)
+	if encPassword == u.Password {
 		return true
 	}
 	return false

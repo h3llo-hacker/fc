@@ -18,12 +18,13 @@ type MongoDB_Conf struct {
 }
 
 type Config struct {
-	Endpoints       []string `json:"Endpoints"`
+	Endpoint        string   `json:"Endpoint"`
+	Etcd            []string `json:"Etcd"`
+	LogLevel        string   `json:"LogLevel"`
+	SendGridKey     string   `json:"SendGridKey"`
+	InviteMode      bool     `json:"InviteMode"`
+	ComposeFilePath string   `json:"ComposeFilePath"`
 	MongoDB         MongoDB_Conf
-	LogLevel        string `json:"LogLevel"`
-	SendGridKey     string `json:"SendGridKey"`
-	InviteMode      bool   `json:"InviteMode"`
-	ComposeFilePath string `json:"ComposeFilePath"`
 }
 
 var Conf Config
@@ -90,6 +91,9 @@ func setTimeZone() {
 }
 
 func LoadConfig() (*Config, error) {
+	if Conf.LogLevel != "" {
+		return &Conf, nil
+	}
 	conf, err := ReadConfig()
 	if err != nil {
 		return nil, err

@@ -1,6 +1,12 @@
 {
   "Endpoint": "127.0.0.1:2374",
-  "Etcd": ["http://127.0.0.1:2379"],
+  "Etcd": {
+    "Hosts": [
+      "http://10.170.32.166:2379"
+    ],
+    "User": "username",
+    "Pass": "password"
+  },
   "MongoDB": {
     "Host": "127.0.0.1",
     "Port": "27017",

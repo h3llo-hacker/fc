@@ -4,6 +4,7 @@ import (
 	"config"
 	"fmt"
 	"handler/docker"
+	"handler/register"
 	"handler/template"
 	U "handler/user"
 	"strings"
@@ -26,8 +27,16 @@ func CreateChallenge(userID, templateID, challengeID string) (string, error) {
 		uid, _ := uuid.NewV4()
 		challengeID = fmt.Sprintf("%v", uid)
 	}
+	var user U.User
+	user.UserID = userID
+	tu, err := user.QueryUser([]string{"UserURL"})
+	if err != nil {
+		return "", err
+	}
+
 	flag := utils.RandomFlag()
 	now := time.Now()
+	challengeUrl := utils.GenerateChallengeUrl(tu.UserURL, challengeID)
 
 	log.Debugf("Creating challenge [%v], flag is [%v]", challengeID, flag)
 
@@ -43,6 +52,7 @@ func CreateChallenge(userID, templateID, challengeID string) (string, error) {
 		Name:       t.Name,
 		TemplateID: t.ID,
 		Flag:       flag,
+		Url:        challengeUrl,
 		StackID:    challengeID,
 		UserID:     userID,
 		Time: types.Time_struct{
@@ -54,6 +64,7 @@ func CreateChallenge(userID, templateID, challengeID string) (string, error) {
 		ChallengeID: challengeID,
 		TemplateID:  t.ID,
 		Flag:        flag,
+		Url:         challengeUrl,
 		CreateTime:  now,
 		State:       "creating",
 	}
@@ -82,15 +93,32 @@ func CreateChallenge(userID, templateID, challengeID string) (string, error) {
 		stackName, deploylogs)
 
 	// push this challenge to user's challenges
-	var user U.User
-	user.UserID = userID
 	update := bson.M{"$push": bson.M{"Challenges": userChallenge}}
 	err = user.UpdateUser(update)
 	if err != nil {
 		return challengeID, err
 	}
-
-	go updateChallenge(userID, challengeID)
+	go func() {
+		// update services
+		services, err := updateChallenge(userID, challengeID)
+		if err != nil {
+			log.Errorf("Update Challenge Services Error: [%v]", err)
+			return
+		}
+		// register to etcd
+		err = register.RegisterNewChallenge(challengeID, challengeUrl, services)
+		if err != nil {
+			log.Errorf("RegisterNewChallenge Error: [%v]", err)
+		}
+		// update challenge state (running)
+		for i := 0; i < 6; i++ {
+			time.Sleep(10 * time.Second)
+			err = RefreshChallengeState(challengeID)
+			if err == nil {
+				break
+			}
+		}
+	}()
 
 	return challengeID, nil
 }
@@ -131,6 +159,15 @@ func QueryChallenge(challengeID string) (types.Challenge, error) {
 			challengeID)
 	}
 
+	if challenges[0].State == "created" {
+		go func() {
+			err = RefreshChallengeState(challengeID)
+			if err != nil {
+				log.Errorf("RefreshChallengeState Error: [%v]", err)
+			}
+		}()
+	}
+
 	return challenges[0], nil
 }
 
@@ -147,20 +184,22 @@ func RmChallenge(userID, challengeID string) error {
 		return err
 	}
 
-	err = updateUserChallengeState(userID, challengeID, "terminated")
-	if err != nil {
-		return err
-	}
-
-	// update states and finish time in collection `challenges`
+	// update states and finish time in collection `challenges` and `users`
 	err = UpdateChallengeState(challengeID, "terminated")
 	if err != nil {
 		return err
 	}
+
+	//  Unregister challenge from etcd
+	err = register.UnregisterChallenge(challengeID)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func updateUserChallengeState(uid, cid, state string) error {
+func UpdateUserChallengeState(uid, cid, state string) error {
 	selector := bson.M{"Challenges.ChallengeID": cid}
 	update := bson.M{"$set": bson.M{"Challenges.$.State": state}}
 	err := db.MongoUpdate("user", selector, update)
@@ -171,11 +210,20 @@ func updateUserChallengeState(uid, cid, state string) error {
 }
 
 func UpdateChallengeState(challengeID, state string) error {
-	selector := bson.M{"ID": challengeID}
+	query := bson.M{"ID": challengeID}
 	update := bson.M{"$set": bson.M{"Time.FinishTime": time.Now(), "State": state}}
-	err := db.MongoUpdate(C, selector, update)
+	err := db.MongoUpdate(C, query, update)
 	if err != nil {
-		log.Errorf("UpdateChallengeState Error: [%v]", err)
+		return err
+	}
+	selector := bson.M{"UserID": 1}
+	c, err := db.MongoFind(C, query, selector)
+	if err != nil {
+		return err
+	}
+	uid := c[0].(bson.M)["UserID"].(string)
+	err = UpdateUserChallengeState(uid, challengeID, state)
+	if err != nil {
 		return err
 	}
 	return nil
@@ -205,7 +253,7 @@ func ValidateFlag(flag, challengeID string) bool {
 }
 
 func updateUserChallengeServices(challengeID string,
-	services []types.Service_struct) error {
+	services []types.Service) error {
 	selector := bson.M{"Challenges.ChallengeID": challengeID}
 	update := bson.M{"$set": bson.M{"Challenges.$.Services": services}}
 	err := db.MongoUpdate("user", selector, update)
@@ -215,39 +263,41 @@ func updateUserChallengeServices(challengeID string,
 	return nil
 }
 
-func updateChallenge(userID, challengeID string) {
-	tries := 0
-START:
-	// wait 20s for startup
-	time.Sleep(time.Second * 20)
+func updateChallenge(userID, challengeID string) ([]types.Service, error) {
+	var (
+		ChallengeServices []types.Service
+		singleService     types.Service
+	)
+
 	// just get the first endpoint, maybe it's a bug
 	endpoint := config.Conf.Endpoint
 	namespace := challengeID
 	tasks, err := docker.PsStack(endpoint, namespace)
 	if err != nil {
 		log.Error("Ps Task Error: [%v], challengeID: [%v]", err, namespace)
-		return
+		return ChallengeServices, err
 	}
 
 	// get port map
-	var (
-		ChallengeServices []types.Service_struct
-		challengeService  types.Service_struct
-	)
 	for _, task := range tasks {
 		service, err := docker.InspectService(task.ServiceID)
 		if err != nil {
 			log.Errorf("inspect service [%v] error: [%v]", task.ServiceID, err)
-			return
+			return ChallengeServices, err
 		}
 		serviceName := strings.SplitAfter(service.Spec.Name, "_")
-		challengeService.ServiceName = serviceName[1]
-		for _, ports := range service.Endpoint.Ports {
-			challengeService.TargetPort = int(ports.TargetPort)
-			challengeService.PublishedPort = int(ports.PublishedPort)
+		singleService.ServiceName = serviceName[1]
+		// some service doesn't have any publish ports
+		if len(service.Endpoint.Ports) == 0 {
+			singleService.TargetPort = 0
+			singleService.PublishedPort = 0
+		} else {
+			for _, ports := range service.Endpoint.Ports {
+				singleService.TargetPort = int(ports.TargetPort)
+				singleService.PublishedPort = int(ports.PublishedPort)
+			}
 		}
-		log.Debugf("challengeService: [%v]", challengeService)
-		ChallengeServices = append(ChallengeServices, challengeService)
+		ChallengeServices = append(ChallengeServices, singleService)
 	}
 	log.Debugf("ChallengeServices: [%v]", ChallengeServices)
 
@@ -255,7 +305,19 @@ START:
 	err = updateUserChallengeServices(challengeID, ChallengeServices)
 	if err != nil {
 		log.Errorf("updateUserChallengeServices Error: [%v]", err)
-		return
+		return ChallengeServices, err
+	}
+	return ChallengeServices, nil
+}
+
+func RefreshChallengeState(challengeID string) error {
+	// just get the first endpoint, maybe it's a bug
+	endpoint := config.Conf.Endpoint
+	namespace := challengeID
+	tasks, err := docker.PsStack(endpoint, namespace)
+	if err != nil {
+		log.Error("Ps Task Error: [%v], challengeID: [%v]", err, namespace)
+		return err
 	}
 
 	running_services := 0
@@ -266,24 +328,14 @@ START:
 	}
 	if running_services != len(tasks) {
 		log.Errorf("Challenge not running, id [%v]", challengeID)
-		// restart
-		if tries == 4 {
-			log.Errorf("Challenge not running for 4 times, id [%v]", challengeID)
-			return
-		}
-		tries += 1
-		goto START
+		return fmt.Errorf("Challenge not running, id [%v]", challengeID)
 	}
+
 	// update DB
 	err = UpdateChallengeState(challengeID, "running")
 	if err != nil {
-		log.Errorf("Challenge.Create.UpdateStates Error! [%v] ", err)
-		return
+		e := fmt.Errorf("Challenge.RefreshChallengeState.UpdateStates Error: [%v] ", err)
+		return e
 	}
-	err = updateUserChallengeState(userID, challengeID, "running")
-	if err != nil {
-		log.Errorf("Challenge.Create.UpdateUserChallengeStates Error! [%v] ", err)
-		return
-	}
-
+	return nil
 }

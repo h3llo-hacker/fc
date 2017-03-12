@@ -16,7 +16,12 @@ db.createUser({ user: 'muser', pwd: 'mpass', roles: [ { role: "userAdminAnyDatab
 ### etcd
 ```bash
 docker volume create etcd_data
-docker run -dti -p 2379:2379 -p 2380:2380 -v etcd_data:/default.etcd quay.io/coreos/etcd:latest etcd --listen-client-urls http://0.0.0.0:2379 --advertise-client-urls http://0.0.0.0:2380
+docker run -ti --network host \
+	-v etcd_data:/default.etcd \
+	-e ETCD_LISTEN_PEER_URLS=http://10.170.32.166:2380 \
+	-e ETCD_LISTEN_CLIENT_URLS=http://10.170.32.166:2379 \
+	-e ETCD_ADVERTISE_CLIENT_URLS=http://10.170.32.166:2379 \
+	quay.io/coreos/etcd:latest
 ```
 
 export FC_CONFIG="/home/mr/Documents/work_space/fc/bin/config.json"

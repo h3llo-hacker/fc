@@ -2,6 +2,7 @@ package routes
 
 import (
 	"fmt"
+	"handler/challenge"
 	U "handler/user"
 	"time"
 	"types"
@@ -114,27 +115,28 @@ func userChallenges(c *gin.Context) {
 	default:
 		challengeState = "all"
 	}
-
-	selector := bson.M{"Challenges": 1}
-	quser, err := user.QueryUserWithSelector(selector)
+	log.Debugln(challengeState)
+	challenges, err := user.QueryUserChallenges(challengeState)
 	if err != nil {
 		c.JSON(500, gin.H{
 			"err": err.Error(),
 		})
 		return
 	}
-	challenges := quser.Challenges
-	if challengeState != "all" {
-		var returnChallenges []types.UserChallenge
-		for _, c := range challenges {
-			if c.State == challengeState {
-				returnChallenges = append(returnChallenges, c)
-			}
+
+	for _, c := range challenges {
+		if c.State != "created" {
+			continue
 		}
-		c.JSON(200, returnChallenges)
-	} else {
-		c.JSON(200, challenges)
+		go func(challengeID string) {
+			err = challenge.RefreshChallengeState(challengeID)
+			if err != nil {
+				log.Errorf("RefreshChallengeState Error: [%v]", err)
+			}
+		}(c.ChallengeID)
 	}
+
+	c.JSON(200, challenges)
 }
 
 func userFollowers(c *gin.Context) {

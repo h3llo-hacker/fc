@@ -9,7 +9,7 @@ func Test_etcd(t *testing.T) {
 	// Load config first
 	config.LoadConfig()
 
-	_, err := KeysAPI()
+	_, err := KeysAPI(config.Conf.Etcd)
 	if err != nil {
 		t.Error(err)
 	}
@@ -19,12 +19,12 @@ func Test_CreateDir(t *testing.T) {
 	// Load config first
 	config.LoadConfig()
 
-	Kapi, err := KeysAPI()
+	Kapi, err := KeysAPI(config.Conf.Etcd)
 	if err != nil {
 		t.Error(err)
 	}
 	// CreateDir
-	err = Kapi.CreateDir("/dddir")
+	err = Kapi.CreateDir("/a/b/c/d")
 	if err != nil {
 		t.Error(err)
 	}
@@ -34,7 +34,7 @@ func Test_DeleteDir(t *testing.T) {
 	// Load config first
 	config.LoadConfig()
 
-	Kapi, err := KeysAPI()
+	Kapi, err := KeysAPI(config.Conf.Etcd)
 	if err != nil {
 		t.Error(err)
 	}
@@ -49,7 +49,7 @@ func Test_SetValue(t *testing.T) {
 	// Load config first
 	config.LoadConfig()
 
-	Kapi, err := KeysAPI()
+	Kapi, err := KeysAPI(config.Conf.Etcd)
 	if err != nil {
 		t.Error(err)
 	}
@@ -64,7 +64,7 @@ func Test_GetValue(t *testing.T) {
 	// Load config first
 	config.LoadConfig()
 
-	Kapi, err := KeysAPI()
+	Kapi, err := KeysAPI(config.Conf.Etcd)
 	if err != nil {
 		t.Error(err)
 	}
@@ -81,7 +81,7 @@ func Test_DeleteKey(t *testing.T) {
 	// Load config first
 	config.LoadConfig()
 
-	Kapi, err := KeysAPI()
+	Kapi, err := KeysAPI(config.Conf.Etcd)
 	if err != nil {
 		t.Error(err)
 	}
@@ -96,12 +96,12 @@ func Test_CreateInOrder(t *testing.T) {
 	// Load config first
 	config.LoadConfig()
 
-	Kapi, err := KeysAPI()
+	Kapi, err := KeysAPI(config.Conf.Etcd)
 	if err != nil {
 		t.Error(err)
 	}
 
-	dir := "/a/b/c/d"
+	dir := "/a/b/c/d/"
 	// CreateInOrder
 	err = Kapi.CreateInOrder(dir)
 	if err != nil {

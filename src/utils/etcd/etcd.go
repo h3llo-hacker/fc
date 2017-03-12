@@ -2,10 +2,11 @@ package etcd
 
 import (
 	"config"
+	"time"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/coreos/etcd/client"
 	"golang.org/x/net/context"
-	"time"
 )
 
 type API struct {
@@ -14,11 +15,13 @@ type API struct {
 
 var ctx = context.Background()
 
-func KeysAPI() (API, error) {
+func KeysAPI(etcdConf config.Etcd_struct) (API, error) {
 	var A API
 	cfg := client.Config{
-		Endpoints: config.Conf.Etcd,
+		Endpoints: etcdConf.Hosts,
 		Transport: client.DefaultTransport,
+		Username:  etcdConf.User,
+		Password:  etcdConf.Pass,
 		// set timeout per request to fail fast when the target endpoint is unavailable
 		HeaderTimeoutPerRequest: 1 * time.Second,
 	}
@@ -91,5 +94,10 @@ func (Kapi API) CreateInOrder(dir string) error {
 	if err != nil {
 		return err
 	}
+	resp, err := Kapi.K.Get(ctx, dir, nil)
+	if err != nil {
+		return err
+	}
+	log.Infoln(resp.Node.Key)
 	return nil
 }

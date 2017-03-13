@@ -22,8 +22,8 @@ func RegisterNewChallenge(challengeID, challengeUrl string,
 		return err
 	}
 
-	// set /xxx-xxx-xxx-xxx/url
-	key := fmt.Sprintf("/challenges/%s/url", challengeID)
+	// set /xxx-xxx-xxx-xxx/prefix
+	key := fmt.Sprintf("/challenges/%s/prefix", challengeID)
 	value := challengeUrl
 	err = kapi.SetValue(key, value, 0)
 	if err != nil {

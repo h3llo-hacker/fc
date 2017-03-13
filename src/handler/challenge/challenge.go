@@ -36,7 +36,7 @@ func CreateChallenge(userID, templateID, challengeID string) (string, error) {
 
 	flag := utils.RandomFlag()
 	now := time.Now()
-	challengeUrl := utils.GenerateChallengeUrl(tu.UserURL, challengeID)
+	UrlPrefix := utils.GenerateChallengeUrl(tu.UserURL, challengeID)
 
 	log.Debugf("Creating challenge [%v], flag is [%v]", challengeID, flag)
 
@@ -52,7 +52,7 @@ func CreateChallenge(userID, templateID, challengeID string) (string, error) {
 		Name:       t.Name,
 		TemplateID: t.ID,
 		Flag:       flag,
-		Url:        challengeUrl,
+		UrlPrefix:  UrlPrefix,
 		StackID:    challengeID,
 		UserID:     userID,
 		Time: types.Time_struct{
@@ -64,7 +64,7 @@ func CreateChallenge(userID, templateID, challengeID string) (string, error) {
 		ChallengeID: challengeID,
 		TemplateID:  t.ID,
 		Flag:        flag,
-		Url:         challengeUrl,
+		UrlPrefix:   UrlPrefix,
 		CreateTime:  now,
 		State:       "creating",
 	}
@@ -106,7 +106,7 @@ func CreateChallenge(userID, templateID, challengeID string) (string, error) {
 			return
 		}
 		// register to etcd
-		err = register.RegisterNewChallenge(challengeID, challengeUrl, services)
+		err = register.RegisterNewChallenge(challengeID, UrlPrefix, services)
 		if err != nil {
 			log.Errorf("RegisterNewChallenge Error: [%v]", err)
 		}

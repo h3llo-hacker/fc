@@ -34,7 +34,7 @@ type Service struct {
 type UserChallenge struct {
 	ChallengeID string    `bson:"ChallengeID"`
 	TemplateID  string    `bson:"TemplateID"`
-	Url         string    `bson:"Url"`
+	UrlPrefix   string    `bson:"UrlPrefix"`
 	Flag        string    `bson:"Flag"`
 	FinishTime  time.Time `bson:"FinishTime"`
 	CreateTime  time.Time `bson:"CreateTime"`

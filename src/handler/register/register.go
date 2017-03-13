@@ -10,10 +10,10 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
-func RegisterNewChallenge(challengeID, challengeUrl string,
+func RegisterNewChallenge(challengeID, UrlPrefix string,
 	services []types.Service) (err error) {
 
-	log.Debugf("Register New Challenge, challengeID: [%v], challengeUrl: [%v], services: [%v]", challengeID, challengeUrl, services)
+	log.Debugf("Register New Challenge, challengeID: [%v], UrlPrefix: [%v], services: [%v]", challengeID, UrlPrefix, services)
 
 	challengeDir := "/challenges/" + challengeID
 
@@ -24,7 +24,7 @@ func RegisterNewChallenge(challengeID, challengeUrl string,
 
 	// set /xxx-xxx-xxx-xxx/prefix
 	key := fmt.Sprintf("/challenges/%s/prefix", challengeID)
-	value := challengeUrl
+	value := UrlPrefix
 	err = kapi.SetValue(key, value, 0)
 	if err != nil {
 		kapi.DeleteDir(challengeDir)

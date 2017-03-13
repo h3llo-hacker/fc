@@ -13,7 +13,7 @@ type Challenge struct {
 	ID         string      `bson:"ID"`
 	Name       string      `bson:"Name"`
 	TemplateID string      `bson:"TemplateID"`
-	Url        string      `bson:"Url"`
+	UrlPrefix  string      `bson:"UrlPrefix"`
 	Flag       string      `bson:"Flag"`
 	StackID    string      `bson:"StackID"`
 	UserID     string      `bson:"UserID"`

@@ -50,10 +50,12 @@ func InsertTemplate(content interface{}, templateName string) error {
 
 func QueryTemplate(templateID string) (t []types.Template, err error) {
 	query := bson.M{"ID": templateID}
+	selector := bson.M{}
 	if templateID == "all" {
 		query = bson.M{}
+		selector = bson.M{"ID": 1, "Name": 1}
 	}
-	templates, err := db.MongoFind(C, query, nil)
+	templates, err := db.MongoFind(C, query, selector)
 	if err != nil {
 		return nil, err
 	}

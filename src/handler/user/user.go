@@ -8,13 +8,13 @@ import (
 	"strings"
 	"types"
 	"utils"
+	db "utils/db"
 
 	log "github.com/Sirupsen/logrus"
 	valid "github.com/asaskevich/govalidator"
 	pinyin "github.com/jmz331/gpinyin"
 	"github.com/nu7hatch/gouuid"
 	"gopkg.in/mgo.v2/bson"
-	db "utils/db"
 )
 
 type User types.User
@@ -60,7 +60,8 @@ func AddUser(user types.User) error {
 
 func (user *User) RmUser() error {
 	if !emailAddrExist(user.EmailAddress) {
-		return errors.New("User Email Not Found")
+		return fmt.Errorf("User Email [%v] Not Found",
+			user.EmailAddress)
 	}
 	query := bson.M{"EmailAddress": user.EmailAddress}
 	err := db.MongoRemove(C, query)
@@ -290,9 +291,13 @@ func (user *User) CheckLogin() bool {
 	items := []string{"Password"}
 	u, err := user.QueryUser(items)
 	if err != nil {
+		log.Errorf("Query User Error: [%v]", err)
 		return false
 	}
-	if utils.Password(user.Password) == u.Password {
+	encPassword := utils.Password(user.Password)
+	// log.Debugf("password: [%v], encPassword: [%v], postPass: [%v]",
+	// u.Password, encPassword, user.Password)
+	if encPassword == u.Password {
 		return true
 	}
 	return false
@@ -323,4 +328,37 @@ func UserExist(uid string) bool {
 		return false
 	}
 	return true
+}
+
+func (user *User) QueryUserChallenges(state string) ([]types.UserChallenge, error) {
+	var (
+		users []types.User
+		query = bson.M{}
+	)
+	e := bson.M{"EmailAddress": user.EmailAddress}
+	i := bson.M{"UserID": user.UserID}
+	u := bson.M{"UserURL": user.UserURL}
+	query = bson.M{"$or": []bson.M{e, u, i}}
+
+	selector := bson.M{"Challenges": 1}
+	err := db.MongoFindUsers(C, query, selector, &users)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(users) == 0 {
+		return nil, errors.New("Not found")
+	}
+
+	if state == "all" {
+		return users[0].Challenges, nil
+	}
+
+	cs := make([]types.UserChallenge, 0)
+	for _, c := range users[0].Challenges {
+		if c.State == state {
+			cs = append(cs, c)
+		}
+	}
+	return cs, nil
 }

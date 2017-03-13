@@ -25,20 +25,21 @@ type Register_struct struct {
 	Date   time.Time     `bson:"Date"` // MongoDB is ISODate (UTC)
 }
 
-type Service_struct struct {
+type Service struct {
 	ServiceName   string `bson:"ServiceName"`
 	TargetPort    int    `bson:"TargetPort"`
 	PublishedPort int    `bson:"PublishedPort"`
 }
 
 type UserChallenge struct {
-	ChallengeID string           `bson:"ChallengeID"`
-	TemplateID  string           `bson:"TemplateID"`
-	Flag        string           `bson:"Flag"`
-	FinishTime  time.Time        `bson:"FinishTime"`
-	CreateTime  time.Time        `bson:"CreateTime"`
-	State       string           `bson:"State"`
-	Services    []Service_struct `bson:"Services"`
+	ChallengeID string    `bson:"ChallengeID"`
+	TemplateID  string    `bson:"TemplateID"`
+	UrlPrefix   string    `bson:"UrlPrefix"`
+	Flag        string    `bson:"Flag"`
+	FinishTime  time.Time `bson:"FinishTime"`
+	CreateTime  time.Time `bson:"CreateTime"`
+	State       string    `bson:"State"`
+	Services    []Service `bson:"Services"`
 }
 
 type Login_struct struct {

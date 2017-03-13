@@ -1,19 +1,19 @@
 package types
 
-type Port struct {
-	Src int
-	Dst int
-}
+// type Port struct {
+// 	Src int
+// 	Dst int
+// }
 
-type Service struct {
-	ID           string
-	BelongToUser string
-	TemplateID   string
-	NetworkID    string
-	Time         Time_struct
-	Status       string
-	Ports        []Port
-}
+// type Service struct {
+// 	ID           string
+// 	BelongToUser string
+// 	TemplateID   string
+// 	NetworkID    string
+// 	Time         Time_struct
+// 	Status       string
+// 	Ports        []Port
+// }
 
 /*
 {

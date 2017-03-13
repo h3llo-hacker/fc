@@ -2,6 +2,7 @@ package routes
 
 import (
 	"fmt"
+	"handler/challenge"
 	U "handler/user"
 	"time"
 	"types"
@@ -17,16 +18,14 @@ func users(c *gin.Context) {
 	items := []string{"UserURL", "UserName", "UserNum",
 		"EmailAddress"}
 	user.EmailAddress = ""
-	userMap, err := user.QueryUserRaw(items)
+	userMap, err := user.QueryUsersRaw(items)
 	if err != nil {
 		c.JSON(500, gin.H{
 			"error": err.Error(),
 		})
 		log.Errorf("Get All Users Error: [%v]", err)
 	} else {
-		c.JSON(200, gin.H{
-			"Users": userMap,
-		})
+		c.JSON(200, userMap)
 	}
 }
 
@@ -67,10 +66,12 @@ func userCreate(c *gin.Context) {
 		})
 	} else {
 		// older user
-		u.UserID = user.Invite.InvitedBy
-		err = u.RemoveInviteCode(inviteCode)
-		if err != nil {
-			log.Errorf("RemoveInviteCode error: [%v], UserID: [%v]", err, u.UserID)
+		if user.Invite.InvitedBy != "invite_off" {
+			u.UserID = user.Invite.InvitedBy
+			err = u.RemoveInviteCode(inviteCode)
+			if err != nil {
+				log.Errorf("RemoveInviteCode error: [%v], UserID: [%v]", err, u.UserID)
+			}
 		}
 		c.JSON(200, gin.H{
 			"Add user": "OK",
@@ -114,27 +115,28 @@ func userChallenges(c *gin.Context) {
 	default:
 		challengeState = "all"
 	}
-
-	selector := bson.M{"Challenges": 1}
-	quser, err := user.QueryUserWithSelector(selector)
+	log.Debugln(challengeState)
+	challenges, err := user.QueryUserChallenges(challengeState)
 	if err != nil {
 		c.JSON(500, gin.H{
 			"err": err.Error(),
 		})
 		return
 	}
-	challenges := quser.Challenges
-	if challengeState != "all" {
-		var returnChallenges []types.UserChallenge
-		for _, c := range challenges {
-			if c.State == challengeState {
-				returnChallenges = append(returnChallenges, c)
-			}
+
+	for _, c := range challenges {
+		if c.State != "created" {
+			continue
 		}
-		c.JSON(200, returnChallenges)
-	} else {
-		c.JSON(200, challenges)
+		go func(challengeID string) {
+			err = challenge.RefreshChallengeState(challengeID)
+			if err != nil {
+				log.Errorf("RefreshChallengeState Error: [%v]", err)
+			}
+		}(c.ChallengeID)
 	}
+
+	c.JSON(200, challenges)
 }
 
 func userFollowers(c *gin.Context) {
@@ -158,7 +160,7 @@ func userFollowees(c *gin.Context) {
 	user := U.User{
 		UserURL: c.Param("userURL"),
 	}
-	items := []string{"Followees"}
+	items := []string{"Following"}
 	quser, err := user.QueryUser(items)
 	if err != nil {
 		c.JSON(500, gin.H{
@@ -166,7 +168,7 @@ func userFollowees(c *gin.Context) {
 		})
 	} else {
 		c.JSON(200, gin.H{
-			"followers": quser.Following,
+			"followees": quser.Following,
 		})
 	}
 }
@@ -176,14 +178,15 @@ func userFollow(c *gin.Context) {
 }
 
 func userDelete(c *gin.Context) {
-	emailAddr, _ := c.GetPostForm("email")
+	emailAddr := c.PostForm("email")
+	log.Debugf("user email: [%v]", emailAddr)
 	user := U.User{
 		EmailAddress: emailAddr,
 	}
 	err := user.RmUser()
 	if err != nil {
-		log.Errorf("Remove User Error: [%v]", err)
 		errStr := fmt.Sprintf("Remove User Error: [%v]", err)
+		log.Error(errStr)
 		c.JSON(500, gin.H{
 			"err": errStr,
 		})
@@ -199,6 +202,7 @@ func userLogin(c *gin.Context) {
 		EmailAddress: c.PostForm("email"),
 		Password:     c.PostForm("password"),
 	}
+	log.Debugf("email: [%v], pass:[%v]", user.EmailAddress, user.Password)
 	if !user.CheckLogin() {
 		c.JSON(401, gin.H{
 			"login": "false",

@@ -26,80 +26,77 @@ func ListServices(endpoint string) ([]string, error) {
 	ctx := context.Background()
 	services, err := cli.ServiceList(ctx, types.ServiceListOptions{})
 	defer cli.Close()
-	if err == nil {
-		s := make([]string, 0)
-		for _, service := range services {
-			s = append(s, service.Spec.Name)
-		}
-		return s, nil
-	} else {
+	if err != nil {
 		return make([]string, 1), err
 	}
+	s := make([]string, len(services))
+	for _, service := range services {
+		s = append(s, service.Spec.Name)
+	}
+	return s, nil
 }
 
 func InspectService(serviceID string) (swarm.Service, error) {
-	var S swarm.Service
-	var E error
-	for _, endpoint := range config.Conf.Endpoints {
-		log.Debugf(fmt.Sprintf("Get Service [ %s ]", serviceID))
-		cli, err := DockerCli(endpoint)
-		if err != nil {
-			log.Error(err)
-			return swarm.Service{}, err
-		} else {
-			defer cli.Close()
-		}
+	var (
+		S swarm.Service
+		E error
+	)
+	endpoint := config.Conf.Endpoint
 
-		// Get Service
-		ctx := context.Background()
-		service, _, err := cli.ServiceInspectWithRaw(ctx, serviceID)
-		if err == nil {
-			S = service
-			E = nil
-			break
-		}
+	log.Debugf(fmt.Sprintf("Get Service [ %s ]", serviceID))
+	cli, err := DockerCli(endpoint)
+	if err != nil {
+		log.Error(err)
+		return swarm.Service{}, err
+	} else {
+		defer cli.Close()
+	}
+
+	// Get Service
+	ctx := context.Background()
+	service, _, err := cli.ServiceInspectWithRaw(ctx, serviceID)
+	if err != nil {
 		S = swarm.Service{}
 		E = err
-
 	}
+	S = service
+	E = nil
 	return S, E
 }
 
 func InspectServiceTasks(serviceID string) (swarm.Task, error) {
-	for _, endpoint := range config.Conf.Endpoints {
-		log.Info(endpoint)
-		cli, err := DockerCli(endpoint)
-		if err != nil {
-			log.Error(err)
-			return swarm.Task{}, err
-		}
-
-		// Get Service
-		ctx := context.Background()
-		service, _, err := cli.ServiceInspectWithRaw(ctx, serviceID)
-		if err == nil {
-			filters := filters.NewArgs()
-			filters.Add("service", service.ID)
-			filters.Add("desired-state", "running")
-			tasks, err := cli.TaskList(ctx, types.TaskListOptions{Filters: filters})
-			if err != nil {
-				log.Error(err)
-			}
-			// Normally, there is only one task, but in global mode, there are lots of tasks.
-			var v_max uint64
-			var task swarm.Task
-			for _, t := range tasks {
-				if t.Version.Index > v_max {
-					v_max = t.Version.Index
-					task = t
-				}
-			}
-			defer cli.Close()
-			return task, nil
-		}
+	endpoint := config.Conf.Endpoint
+	log.Info(endpoint)
+	cli, err := DockerCli(endpoint)
+	if err != nil {
+		log.Error(err)
+		return swarm.Task{}, err
 	}
 
-	return swarm.Task{}, nil
+	// Get Service
+	ctx := context.Background()
+	service, _, err := cli.ServiceInspectWithRaw(ctx, serviceID)
+	if err != nil {
+		return swarm.Task{}, nil
+	}
+	filters := filters.NewArgs()
+	filters.Add("service", service.ID)
+	filters.Add("desired-state", "running")
+	tasks, err := cli.TaskList(ctx, types.TaskListOptions{Filters: filters})
+	if err != nil {
+		log.Error(err)
+	}
+	// Normally, there is only one task, but in global mode, there are lots of tasks.
+	var v_max uint64
+	var task swarm.Task
+	for _, t := range tasks {
+		if t.Version.Index > v_max {
+			v_max = t.Version.Index
+			task = t
+		}
+	}
+	defer cli.Close()
+	return task, nil
 }
 
 func CreateService(endpoint, serviceName, serviceImage string) error {

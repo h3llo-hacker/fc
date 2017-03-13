@@ -71,12 +71,12 @@ func templateRemove(c *gin.Context) {
 
 func templateQuery(c *gin.Context) {
 	templateID := c.Param("templateID")
-	template, err := T.QueryTemplate(templateID)
+	templates, err := T.QueryTemplate(templateID)
 	if err != nil {
 		c.JSON(500, gin.H{
 			"err": err.Error(),
 		})
 	} else {
-		c.JSON(200, template[0])
+		c.JSON(200, templates[0])
 	}
 }

@@ -177,22 +177,30 @@ func RmChallenge(userID, challengeID string) error {
 		return fmt.Errorf("Challenge already removed")
 	}
 
+	// important!
+	if challenge.UserID != userID {
+		return fmt.Errorf("Challenge not belong to user")
+	}
+
 	stackName := challengeID
 	endpoint := config.Conf.Endpoint
 	err = docker.RemoveStack(endpoint, stackName)
 	if err != nil {
+		log.Errorf("Remove Challenge Error: [%v], ChallengeID: [%v], UserID: [%v]", err, challengeID, userID)
 		return err
 	}
 
 	// update states and finish time in collection `challenges` and `users`
 	err = UpdateChallengeState(challengeID, "terminated")
 	if err != nil {
+		log.Errorf("Update Challenge State Error: [%v], ChallengeID: [%v]", err, challengeID)
 		return err
 	}
 
 	//  Unregister challenge from etcd
 	err = register.UnregisterChallenge(challengeID)
 	if err != nil {
+		log.Errorf("Unregister Challenge Error: [%v], ChallengeID: [%v]", err, challengeID)
 		return err
 	}
 

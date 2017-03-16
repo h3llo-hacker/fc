@@ -21,11 +21,16 @@ func users(c *gin.Context) {
 	userMap, err := user.QueryUsersRaw(items)
 	if err != nil {
 		c.JSON(500, gin.H{
-			"error": err.Error(),
+			"code": 0,
+			"msg":  err.Error(),
 		})
 		log.Errorf("Get All Users Error: [%v]", err)
 	} else {
-		c.JSON(200, userMap)
+		c.JSON(200, gin.H{
+			"data": userMap,
+			"code": 1,
+			"msg":  "get all users ok",
+		})
 	}
 }
 
@@ -41,7 +46,8 @@ func userCreate(c *gin.Context) {
 	user.Invite.InvitedBy = inviteBy
 	if err != nil {
 		c.JSON(500, gin.H{
-			"error": err.Error(),
+			"code": 0,
+			"msg":  err.Error(),
 		})
 		return
 	}
@@ -62,7 +68,8 @@ func userCreate(c *gin.Context) {
 	err = U.AddUser(user)
 	if err != nil {
 		c.JSON(500, gin.H{
-			"error": err.Error(),
+			"code": 0,
+			"msg":  err.Error(),
 		})
 	} else {
 		// older user
@@ -74,13 +81,71 @@ func userCreate(c *gin.Context) {
 			}
 		}
 		c.JSON(200, gin.H{
-			"Add user": "OK",
+			"code": 1,
+			"msg":  "create user successfully.",
 		})
 	}
 }
 
 func userUpdate(c *gin.Context) {
+	user := U.User{
+		UserURL: c.Param("userURL"),
+	}
 
+	userValidate := types.User{
+		UserName:     c.PostForm("username"),
+		Password:     c.PostForm("password"),
+		Intro:        c.PostForm("intro"),
+		EmailAddress: c.PostForm("email"),
+		WebSite:      c.PostForm("website"),
+	}
+	err := userValidate.ValidateFormat()
+	if err != nil {
+		c.JSON(500, gin.H{
+			"code": 0,
+			"msg":  err.Error(),
+		})
+		return
+	}
+	// UserName, Password, Intro, EmailAddress, WebSite
+	update := make(map[string]interface{}, 0)
+	if userValidate.UserName != "" {
+		update["UserName"] = userValidate.UserName
+	}
+	if userValidate.Password != "" {
+		encPass := utils.Password(userValidate.Password)
+		update["Password"] = encPass
+	}
+	if userValidate.Intro != "" {
+		update["Intro"] = userValidate.Intro
+	}
+	if userValidate.EmailAddress != "" {
+		update["EmailAddress"] = userValidate.EmailAddress
+	}
+	if userValidate.WebSite != "" {
+		update["WebSite"] = userValidate.WebSite
+	}
+	if len(update) == 0 {
+		c.JSON(500, gin.H{
+			"code": 0,
+			"msg":  "nothing changed",
+		})
+		return
+	}
+	log.Debugf("update format [%v]", update)
+	update = bson.M{"$set": update}
+	err = user.UpdateUser(update)
+	if err != nil {
+		c.JSON(500, gin.H{
+			"code": 0,
+			"msg":  err.Error(),
+		})
+	} else {
+		c.JSON(200, gin.H{
+			"code": 1,
+			"msg":  "update ok",
+		})
+	}
 }
 
 func userInfo(c *gin.Context) {
@@ -91,10 +156,15 @@ func userInfo(c *gin.Context) {
 	quser, err := user.QueryUserRaw(items)
 	if err != nil {
 		c.JSON(404, gin.H{
-			"err": err.Error(),
+			"code": 0,
+			"msg":  err.Error(),
 		})
 	} else {
-		c.JSON(200, quser.(bson.M))
+		c.JSON(200, gin.H{
+			"code": 1,
+			"msg":  "update ok",
+			"data": quser.(bson.M),
+		})
 	}
 }
 
@@ -115,11 +185,12 @@ func userChallenges(c *gin.Context) {
 	default:
 		challengeState = "all"
 	}
-	log.Debugln(challengeState)
-	challenges, err := user.QueryUserChallenges(challengeState)
+
+	challenges, err := user.QueryUserChallenges([]string{challengeState})
 	if err != nil {
 		c.JSON(500, gin.H{
-			"err": err.Error(),
+			"code": 0,
+			"msg":  err.Error(),
 		})
 		return
 	}
@@ -147,11 +218,14 @@ func userFollowers(c *gin.Context) {
 	quser, err := user.QueryUser(items)
 	if err != nil {
 		c.JSON(500, gin.H{
-			"err": err,
+			"code": 0,
+			"msg":  err.Error(),
 		})
 	} else {
 		c.JSON(200, gin.H{
-			"followers": quser.Followers,
+			"code": 1,
+			"msg":  "get user followers ok",
+			"data": quser.Followers,
 		})
 	}
 }
@@ -164,11 +238,14 @@ func userFollowees(c *gin.Context) {
 	quser, err := user.QueryUser(items)
 	if err != nil {
 		c.JSON(500, gin.H{
-			"err": err,
+			"code": 0,
+			"msg":  err.Error(),
 		})
 	} else {
 		c.JSON(200, gin.H{
-			"followees": quser.Following,
+			"code": 1,
+			"msg":  "get user followees ok",
+			"data": quser.Following,
 		})
 	}
 }
@@ -188,11 +265,13 @@ func userDelete(c *gin.Context) {
 		errStr := fmt.Sprintf("Remove User Error: [%v]", err)
 		log.Error(errStr)
 		c.JSON(500, gin.H{
-			"err": errStr,
+			"code": 0,
+			"msg":  errStr,
 		})
 	} else {
 		c.JSON(200, gin.H{
-			"Rm User OK": "OK",
+			"code": 0,
+			"msg":  "rm user ok",
 		})
 	}
 }
@@ -205,12 +284,14 @@ func userLogin(c *gin.Context) {
 	log.Debugf("email: [%v], pass:[%v]", user.EmailAddress, user.Password)
 	if !user.CheckLogin() {
 		c.JSON(401, gin.H{
-			"login": "false",
+			"code": 0,
+			"msg":  "login false",
 		})
 		return
 	}
 	c.JSON(200, gin.H{
-		"login": "true",
+		"code": 1,
+		"msg":  "login true",
 	})
 
 	go func() {

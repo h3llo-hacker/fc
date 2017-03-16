@@ -66,15 +66,29 @@ type User struct {
 }
 
 func (user *User) ValidateUser() error {
+
+	if user.UserName == "" || user.Password == "" || user.EmailAddress == "" {
+		return errors.New("username or password or email cannot be empty.")
+	}
+
+	err := user.ValidateFormat()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (user *User) ValidateFormat() error {
 	// First check email address
-	if !valid.IsEmail(user.EmailAddress) {
-		return errors.New("wrong email format:" + user.EmailAddress)
+	if user.EmailAddress != "" && !valid.IsEmail(user.EmailAddress) {
+		return errors.New("illegal email format:" + user.EmailAddress)
 	}
 
 	// check website
 	if user.WebSite != "" {
 		if !valid.IsURL(user.WebSite) {
-			return errors.New("wrong website format")
+			return errors.New("illegal website format")
 		}
 	}
 
@@ -82,13 +96,11 @@ func (user *User) ValidateUser() error {
 		user.UserURL = strings.ToLower(user.UserURL)
 	}
 
-	if user.UserName == "" || user.Password == "" || user.EmailAddress == "" {
-		return errors.New("username or password or email cannot be empty.")
-	}
-
-	user.UserName = strings.TrimSpace(user.UserName)
-	if len(user.UserName) < 6 || len(user.UserName) > 66 {
-		return errors.New("make sure [6 < username < 66]")
+	if user.UserName != "" {
+		user.UserName = strings.TrimSpace(user.UserName)
+		if len(user.UserName) < 6 || len(user.UserName) > 66 {
+			return errors.New("illegal username length, must be [6, 66]")
+		}
 	}
 
 	if len(user.Intro) > 423 {

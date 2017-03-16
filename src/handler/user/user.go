@@ -67,7 +67,7 @@ func (user *User) RmUser() error {
 	err := db.MongoRemove(C, query)
 	if err != nil {
 		log.Errorf("MongoRemove Error: [%v]", err)
-		return err
+		return fmt.Errorf("MongoRemove Error: [%v]", err)
 	}
 	return nil
 }
@@ -79,7 +79,7 @@ func (user *User) UpdateUser(update bson.M) error {
 	query := bson.M{"$or": []bson.M{e, u, i}}
 	err := db.MongoUpdate(C, query, update)
 	if err != nil {
-		return err
+		return fmt.Errorf("update user err: %v", err)
 	}
 	return nil
 }
@@ -98,7 +98,7 @@ func (user *User) QueryUserAll(items []string) ([]types.User, error) {
 	}
 	err := db.MongoFindUsers(C, query, selector, &users)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("MongoFindUsers Error: [%v]", err)
 	}
 	return users, nil
 }
@@ -303,6 +303,7 @@ func (user *User) CheckLogin() bool {
 	return false
 }
 
+// update login times and login infomation
 func (user *User) UpdateUserLogin(login types.Register_struct) error {
 	update := bson.M{"$push": bson.M{"Login.LastLogins": login}}
 	user.UpdateUser(update)
@@ -330,7 +331,7 @@ func UserExist(uid string) bool {
 	return true
 }
 
-func (user *User) QueryUserChallenges(state string) ([]types.UserChallenge, error) {
+func (user *User) QueryUserChallenges(state []string) ([]types.UserChallenge, error) {
 	var (
 		users []types.User
 		query = bson.M{}
@@ -350,14 +351,18 @@ func (user *User) QueryUserChallenges(state string) ([]types.UserChallenge, erro
 		return nil, errors.New("Not found")
 	}
 
-	if state == "all" {
-		return users[0].Challenges, nil
+	for _, s := range state {
+		if s == "all" {
+			return users[0].Challenges, nil
+		}
 	}
 
 	cs := make([]types.UserChallenge, 0)
 	for _, c := range users[0].Challenges {
-		if c.State == state {
-			cs = append(cs, c)
+		for _, s := range state {
+			if c.State == s {
+				cs = append(cs, c)
+			}
 		}
 	}
 	return cs, nil

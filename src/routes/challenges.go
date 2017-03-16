@@ -3,6 +3,7 @@ package routes
 import (
 	"fmt"
 	"handler/challenge"
+	"handler/user"
 
 	"github.com/gin-gonic/gin"
 	"github.com/nu7hatch/gouuid"
@@ -49,6 +50,35 @@ func challengeCreate(c *gin.Context) {
 		return
 	}
 
+	// check quota
+	u := user.User{
+		UserID: userID,
+	}
+	tu, err := u.QueryUser([]string{"Quota"})
+	if err != nil {
+		c.JSON(500, gin.H{
+			"code": 0,
+			"msg":  err.Error(),
+		})
+		return
+	}
+	challenges, err := u.QueryUserChallenges([]string{"running",
+		"creating"})
+	if err != nil {
+		c.JSON(500, gin.H{
+			"code": 0,
+			"msg":  err.Error(),
+		})
+		return
+	}
+	if len(challenges) >= tu.Quota {
+		c.JSON(500, gin.H{
+			"code": 0,
+			"msg":  fmt.Sprintf("Quota Not Enough, You've already creating [%v] challenges", tu.Quota),
+		})
+		return
+	}
+
 	uid, _ := uuid.NewV4()
 	challengeID := fmt.Sprintf("%v", uid)
 
@@ -62,8 +92,10 @@ func challengeCreate(c *gin.Context) {
 		}
 	}()
 	c.JSON(201, gin.H{
-		"challenge created": "ok",
-		"id":                challengeID,
+		"code": 1,
+		"msg":  "challenge created",
+		"data": challengeID,
+		"id":   challengeID,
 	})
 }
 
@@ -73,13 +105,15 @@ func challengeRemove(c *gin.Context) {
 
 	if !validateUser(uid) {
 		c.JSON(500, gin.H{
-			"err": "uid: [" + uid + "] not found",
+			"code": 0,
+			"msg":  "uid: [" + uid + "] not found",
 		})
 		return
 	}
 	if !validateChallenge(challengeID) {
 		c.JSON(500, gin.H{
-			"err": "challengeID: [" + challengeID + "] not found",
+			"code": 0,
+			"msg":  "challengeID: [" + challengeID + "] not found",
 		})
 		return
 	}
@@ -87,11 +121,13 @@ func challengeRemove(c *gin.Context) {
 	err := challenge.RmChallenge(uid, challengeID)
 	if err != nil {
 		c.JSON(500, gin.H{
-			"err": err.Error(),
+			"code": 0,
+			"msg":  err.Error(),
 		})
 		return
 	}
 	c.JSON(200, gin.H{
-		"remove challenge": "ok",
+		"code": 1,
+		"msg":  "challenge removed",
 	})
 }

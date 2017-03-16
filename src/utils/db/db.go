@@ -19,8 +19,10 @@ func MongoConn() (*mgo.Session, string, error) {
 	if config.Conf.MongoDB.DB == "" {
 		config.LoadConfig()
 	}
-	if mongoConn != nil && mongoConn.Ping() == nil {
-		return mongoConn, config.Conf.MongoDB.DB, nil
+	if mongoConn != nil {
+		if mongoConn.Ping() == nil {
+			return mongoConn, config.Conf.MongoDB.DB, nil
+		}
 	}
 
 	MongoDB := config.Conf.MongoDB

@@ -7,21 +7,55 @@ Develop: [![Develop Build Status](https://travis-ci.com/wrfly/fc.svg?token=LqBN1
 
 ### MongoDB
 ```bash
-docker volume create --name mongodb
-docker run -dti -p 27017:27017 -v mongodb:/data/db mongo:3.2 --auth
+docker run -dti -p 27017:27017 -v ./mongodb:/data/db mongo:3.4
+use admin
+db.createUser(
+  {
+    user: "myUserAdmin",
+    pwd: "abc123",
+    roles: [ { role: "userAdminAnyDatabase", db: "admin" } ]
+  }
+)
 
-db.createUser({ user: 'muser', pwd: 'mpass', roles: [ { role: "userAdminAnyDatabase", db: "fc" } ] });
+#
+# after restart the container
+#
+
+docker run -dti -p 27017:27017 -v ./mongodb:/data/db mongo:3.4 --auth
+
+use test
+db.createUser(
+  {
+    user: "myTester",
+    pwd: "xyz123",
+    roles: [ { role: "readWrite", db: "test" }]
+  }
+)
 ```
+set auth: <https://docs.mongodb.com/manual/tutorial/enable-authentication/>
+
 
 ### etcd
 ```bash
-docker volume create etcd_data
-docker run -ti --network host \
-	-v etcd_data:/default.etcd \
-	-e ETCD_LISTEN_PEER_URLS=http://10.170.32.166:2380 \
-	-e ETCD_LISTEN_CLIENT_URLS=http://10.170.32.166:2379 \
-	-e ETCD_ADVERTISE_CLIENT_URLS=http://10.170.32.166:2379 \
-	quay.io/coreos/etcd:latest
+mkdir -p /data/etcd_data
+ETH0_IP=$(ip a s eth0 | grep inet | sed "s/.*inet\ \(.*\)\/.*/\1/g")
+docker run -dti --name etcd --network host \
+    -v /data/etcd_data:/default.etcd \
+    -e ETCD_LISTEN_PEER_URLS=http://${ETH0_IP}:2380 \
+    -e ETCD_LISTEN_CLIENT_URLS=http://${ETH0_IP}:2379 \
+    -e ETCD_ADVERTISE_CLIENT_URLS=http://${ETH0_IP}:2379 \
+    wrfly/etcd:latest
+```
+
+# worker node
+```bash
+iptables -A INPUT -p icmp --icmp-type 8 -s 172.17.0.0/16 -j DROP
+```
+
+# master node
+```bash
+iptables -A INPUT -p tcp --dport 2375 -s 172.17.0.0/16 -j REJECT
 ```
 
 export FC_CONFIG="/home/mr/Documents/work_space/fc/bin/config.json"
+

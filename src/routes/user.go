@@ -15,7 +15,7 @@ import (
 
 func users(c *gin.Context) {
 	var user U.User
-	items := []string{"UserURL", "UserName", "UserNum",
+	items := []string{"UserID", "UserURL", "UserName", "UserNum",
 		"EmailAddress"}
 	user.EmailAddress = ""
 	userMap, err := user.QueryUsersRaw(items)

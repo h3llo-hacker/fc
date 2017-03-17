@@ -92,7 +92,6 @@ Date: Wed, 08 Mar 2017 08:05:23 GMT
 ```
 
 ### `POST   /user/update/:userURL`
-(TOTO)
 ```bash
 ➜  ~ http --form POST 127.1:8080/user/update/ming-zi password=newPassword
 HTTP/1.1 200 OK
@@ -614,6 +613,18 @@ Date: Wed, 08 Mar 2017 09:09:35 GMT
 ➜  ~ curl 127.0.0.1:8080/template/remove -X DELETE --form "id=ae70eeed-68b4-42ac-4ca2-17ed74289272" 
 {"err":"not found"}
 ```
+
+### `POST /template/xxx-xxx-xxx/enable`
+```
+➜  ~ curl 127.0.0.1:8080/template/xxx-xxx-xxx/enable -X POST   
+➜  ~ 
+```
+
+### `POST /template/xxx-xxx-xxx/disable`
+```bash
+➜  ~ curl 127.0.0.1:8080/template/xxx-xxx-xxx/disable -X POST
+```
+
 
 ## Service
 ### `GET    /services`

@@ -4,31 +4,44 @@ import (
 	"fmt"
 	"handler/challenge"
 	"handler/user"
+	"utils"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/gin-gonic/gin"
-	"github.com/nu7hatch/gouuid"
+	"gopkg.in/mgo.v2/bson"
 )
 
 func challenges(c *gin.Context) {
 	challenges, err := challenge.AllChallenges()
 	if err != nil {
 		c.JSON(500, gin.H{
-			"err": err.Error(),
+			"code": 0,
+			"msg":  err.Error(),
 		})
 	} else {
-		c.JSON(200, challenges)
+		c.JSON(200, gin.H{
+			"code": 1,
+			"msg":  "get all challenges ok",
+			"data": challenges,
+		})
 	}
 }
 
 func challengeInfo(c *gin.Context) {
 	cid := c.Param("challengeID")
-	challenge, err := challenge.QueryChallenge(cid)
+	filter := bson.M{"ID": cid}
+	challenge, err := challenge.QueryChallenge(filter)
 	if err != nil {
 		c.JSON(500, gin.H{
-			"err": err.Error(),
+			"code": 0,
+			"msg":  err.Error(),
 		})
 	} else {
-		c.JSON(200, challenge)
+		c.JSON(200, gin.H{
+			"code": 1,
+			"msg":  "get challenge info ok",
+			"data": challenge,
+		})
 	}
 }
 
@@ -38,14 +51,16 @@ func challengeCreate(c *gin.Context) {
 
 	if !validateUser(userID) {
 		c.JSON(500, gin.H{
-			"err": "user [" + userID + "] not found",
+			"code": 0,
+			"msg":  "user [" + userID + "] not found",
 		})
 		return
 	}
 
 	if !validateTemplate(templateID) {
 		c.JSON(500, gin.H{
-			"err": "template [" + templateID + "] not found",
+			"code": 0,
+			"msg":  "template [" + templateID + "] not found",
 		})
 		return
 	}
@@ -63,7 +78,7 @@ func challengeCreate(c *gin.Context) {
 		return
 	}
 	challenges, err := u.QueryUserChallenges([]string{"running",
-		"creating"})
+		"creating", "created"})
 	if err != nil {
 		c.JSON(500, gin.H{
 			"code": 0,
@@ -74,18 +89,18 @@ func challengeCreate(c *gin.Context) {
 	if len(challenges) >= tu.Quota {
 		c.JSON(500, gin.H{
 			"code": 0,
-			"msg":  fmt.Sprintf("Quota Not Enough, You've already creating [%v] challenges", tu.Quota),
+			"msg":  fmt.Sprintf("Quota Not Enough, You've already create [%v] challenges", tu.Quota),
 		})
 		return
 	}
 
-	uid, _ := uuid.NewV4()
-	challengeID := fmt.Sprintf("%v", uid)
+	challengeID := utils.Guuid()
 
 	go func() {
 		_, err := challenge.CreateChallenge(userID,
 			templateID, challengeID)
 		if err != nil {
+			log.Errorf("CreateChallenge Error: [%v]", err)
 			challenge.UpdateChallengeState(challengeID, "failed")
 		} else {
 			challenge.UpdateChallengeState(challengeID, "created")

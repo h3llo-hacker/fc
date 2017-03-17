@@ -57,7 +57,10 @@ func Router(router *gin.Engine) {
 	templateGroup := router.Group("/template")
 	{
 		templateGroup.GET("/:templateID", templateQuery)
-		templateGroup.POST("/create", templateCreate)
+		templateGroup.POST("/:templateID/enable", templateEnable)
+		templateGroup.POST("/:templateID/disable", templateDisable)
+		templateGroup.POST("/:templateID/update", templateDisable)
+		templateGroup.PUT("/create", templateCreate)
 		templateGroup.DELETE("/remove", templateRemove)
 	}
 

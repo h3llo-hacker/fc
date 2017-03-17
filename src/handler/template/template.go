@@ -39,6 +39,7 @@ func InsertTemplate(content interface{}, templateName string) error {
 		ID:      templateID,
 		Name:    templateName,
 		Content: content,
+		Display: false,
 	}
 	err := db.MongoInsert(C, T)
 	if err != nil {
@@ -111,4 +112,24 @@ func TemplateExist(templateID string) bool {
 		return false
 	}
 	return true
+}
+
+func EnableTemplate(templateID string, enable bool) error {
+	update := bson.M{"$set": bson.M{"Display": enable}}
+	selector := bson.M{"ID": templateID}
+	err := db.MongoUpdate(C, selector, update)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func UpdateTemplate(templateID string, content interface{}) error {
+	update := bson.M{"$set": bson.M{"Content": content}}
+	selector := bson.M{"ID": templateID}
+	err := db.MongoUpdate(C, selector, update)
+	if err != nil {
+		return err
+	}
+	return nil
 }

@@ -57,5 +57,13 @@ iptables -A INPUT -p icmp --icmp-type 8 -s 172.17.0.0/16 -j DROP
 iptables -A INPUT -p tcp --dport 2375 -s 172.17.0.0/16 -j REJECT
 ```
 
+# web node
+```bash
+iptables -A INPUT -p tcp --dport 2379 -s 172.17.0.0/16 -j ACCEPT
+iptables -A INPUT -p tcp --dport 2379 -s 0/0 -j REJECT
+iptables -A INPUT -p tcp --dport 2380 -s 172.17.0.0/16 -j ACCEPT
+iptables -A INPUT -p tcp --dport 2380 -s 0/0 -j REJECT
+```
+
 export FC_CONFIG="/home/mr/Documents/work_space/fc/bin/config.json"
 

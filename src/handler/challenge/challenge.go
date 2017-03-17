@@ -8,32 +8,51 @@ import (
 	"handler/template"
 	U "handler/user"
 	"strings"
+	"sync"
 	"time"
 	"types"
 	"utils"
 	db "utils/db"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/nu7hatch/gouuid"
+	"github.com/docker/docker/api/types/swarm"
 	"gopkg.in/mgo.v2/bson"
 )
 
-const (
-	C = "challenges"
+var (
+	C          = "challenges"
+	createLock sync.Mutex
 )
 
 func CreateChallenge(userID, templateID, challengeID string) (string, error) {
-	if challengeID == "" {
-		uid, _ := uuid.NewV4()
-		challengeID = fmt.Sprintf("%v", uid)
-	}
+
+	createLock.Lock()
+	defer createLock.Unlock()
+
 	var user U.User
 	user.UserID = userID
-	tu, err := user.QueryUser([]string{"UserURL"})
+
+	if challengeID == "" {
+		challengeID = utils.Guuid()
+	}
+
+	// query user info
+	tu, err := user.QueryUser([]string{"UserURL", "Quota"})
 	if err != nil {
 		return "", err
 	}
 
+	// check if user has enough quota
+	challenges, err := user.QueryUserChallenges([]string{"running",
+		"creating", "created"})
+	if err != nil {
+		return "", err
+	}
+	if len(challenges) >= tu.Quota {
+		return "", fmt.Errorf("User has not enough quota to create challenges.")
+	}
+
+	// generate something
 	flag := utils.RandomFlag()
 	now := time.Now()
 	UrlPrefix := utils.GenerateChallengeUrl(tu.UserURL, challengeID)
@@ -102,8 +121,8 @@ func CreateChallenge(userID, templateID, challengeID string) (string, error) {
 		// update services
 		services, err := updateChallenge(userID, challengeID)
 		if err != nil {
-			log.Errorf("Update Challenge Services Error: [%v]", err)
-			return
+			log.Errorf("Update Challenge Services Error: [%v]",
+				err)
 		}
 		// register to etcd
 		err = register.RegisterNewChallenge(challengeID, UrlPrefix, services)
@@ -139,9 +158,8 @@ func AllChallenges() ([]types.Challenge, error) {
 	return challenges, nil
 }
 
-func QueryChallenge(challengeID string) (types.Challenge, error) {
+func QueryChallenge(filter bson.M) (types.Challenge, error) {
 	var challenges []types.Challenge
-	query := bson.M{"ID": challengeID}
 
 	mongo, dbName, err := db.MongoConn()
 	if err != nil {
@@ -149,21 +167,25 @@ func QueryChallenge(challengeID string) (types.Challenge, error) {
 	}
 	db := mongo.DB(dbName)
 	collection := db.C(C)
-	err = collection.Find(query).Select(nil).All(&challenges)
+	err = collection.Find(filter).Select(nil).All(&challenges)
 	if err != nil {
 		return types.Challenge{}, err
 	}
 
 	if len(challenges) == 0 {
 		return types.Challenge{}, fmt.Errorf("Challenge [%v] Not Found!",
-			challengeID)
+			filter["ID"].(string))
 	}
 
 	if challenges[0].State == "created" {
 		go func() {
-			err = RefreshChallengeState(challengeID)
-			if err != nil {
-				log.Errorf("RefreshChallengeState Error: [%v]", err)
+			for i := 0; i < 6; i++ {
+				err = RefreshChallengeState(filter["ID"].(string))
+				if err == nil {
+					break
+				}
+				log.Errorf("RefreshChallengeState Error: [%v], ChallengeID: [%v]", err, filter["ID"].(string))
+				time.Sleep(5 * time.Second)
 			}
 		}()
 	}
@@ -172,7 +194,12 @@ func QueryChallenge(challengeID string) (types.Challenge, error) {
 }
 
 func RmChallenge(userID, challengeID string) error {
-	challenge, err := QueryChallenge(challengeID)
+	filter := bson.M{"ID": challengeID, "UserID": userID}
+	challenge, err := QueryChallenge(filter)
+	// important!
+	if err != nil {
+		return fmt.Errorf("Challenge not belong to user")
+	}
 	if challenge.State == "terminated" {
 		return fmt.Errorf("Challenge already removed")
 	}
@@ -250,7 +277,8 @@ func ChallengeExist(challengeID string) bool {
 }
 
 func ValidateFlag(flag, challengeID string) bool {
-	challenge, err := QueryChallenge(challengeID)
+	filter := bson.M{"ID": challengeID}
+	challenge, err := QueryChallenge(filter)
 	if err != nil {
 		return false
 	}
@@ -271,30 +299,48 @@ func updateUserChallengeServices(challengeID string,
 	return nil
 }
 
-func updateChallenge(userID, challengeID string) ([]types.Service, error) {
+func updateChallenge(userID, challengeID string) ([]types.Service,
+	error) {
 	var (
 		ChallengeServices []types.Service
 		singleService     types.Service
+		tasks             []swarm.Task
+		err               error
+		service           swarm.Service
 	)
 
 	// just get the first endpoint, maybe it's a bug
 	endpoint := config.Conf.Endpoint
 	namespace := challengeID
-	tasks, err := docker.PsStack(endpoint, namespace)
-	if err != nil {
-		log.Error("Ps Task Error: [%v], challengeID: [%v]", err, namespace)
-		return ChallengeServices, err
+	for i := 0; i < 60; i++ {
+		tasks, err = docker.PsStack(endpoint, namespace)
+		if err == nil {
+			break
+		}
+		log.Errorf("Ps Task Error: [%v], challengeID: [%v]",
+			err, namespace)
+		time.Sleep(time.Second * 5)
 	}
 
 	// get port map
 	for _, task := range tasks {
-		service, err := docker.InspectService(task.ServiceID)
-		if err != nil {
-			log.Errorf("inspect service [%v] error: [%v]", task.ServiceID, err)
-			return ChallengeServices, err
+		for i := 0; i < 10; i++ {
+			service, err = docker.InspectService(task.ServiceID)
+			if err == nil {
+				break
+			}
+			time.Sleep(3 * time.Second)
 		}
-		serviceName := strings.SplitAfter(service.Spec.Name, "_")
+		if service.Spec.Name == "" {
+			return ChallengeServices,
+				fmt.Errorf("Inspect service [%v] error: [%v]",
+					task.ServiceID, err)
+		}
+
+		serviceName := strings.SplitAfterN(service.Spec.Name,
+			"_", 2)
 		singleService.ServiceName = serviceName[1]
+
 		// some service doesn't have any publish ports
 		if len(service.Endpoint.Ports) == 0 {
 			singleService.TargetPort = 0
@@ -305,7 +351,8 @@ func updateChallenge(userID, challengeID string) ([]types.Service, error) {
 				singleService.PublishedPort = int(ports.PublishedPort)
 			}
 		}
-		ChallengeServices = append(ChallengeServices, singleService)
+		ChallengeServices = append(ChallengeServices,
+			singleService)
 	}
 	log.Debugf("ChallengeServices: [%v]", ChallengeServices)
 
@@ -324,7 +371,7 @@ func RefreshChallengeState(challengeID string) error {
 	namespace := challengeID
 	tasks, err := docker.PsStack(endpoint, namespace)
 	if err != nil {
-		log.Error("Ps Task Error: [%v], challengeID: [%v]", err, namespace)
+		// log.Errorf("Ps Task Error: [%v], challengeID: [%v]", err, namespace)
 		return err
 	}
 

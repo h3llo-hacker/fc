@@ -14,7 +14,7 @@ import (
 func challenges(c *gin.Context) {
 	challenges, err := challenge.AllChallenges()
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  err.Error(),
 		})
@@ -32,7 +32,7 @@ func challengeInfo(c *gin.Context) {
 	filter := bson.M{"ID": cid}
 	challenge, err := challenge.QueryChallenge(filter)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  err.Error(),
 		})
@@ -50,7 +50,7 @@ func challengeCreate(c *gin.Context) {
 	templateID := c.Request.PostFormValue("templateID")
 
 	if !validateUser(userID) {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  "user [" + userID + "] not found",
 		})
@@ -58,7 +58,7 @@ func challengeCreate(c *gin.Context) {
 	}
 
 	if !validateTemplate(templateID) {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  "template [" + templateID + "] not found",
 		})
@@ -71,7 +71,7 @@ func challengeCreate(c *gin.Context) {
 	}
 	tu, err := u.QueryUser([]string{"Quota"})
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  err.Error(),
 		})
@@ -80,14 +80,14 @@ func challengeCreate(c *gin.Context) {
 	challenges, err := u.QueryUserChallenges([]string{"running",
 		"creating", "created"})
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  err.Error(),
 		})
 		return
 	}
 	if len(challenges) >= tu.Quota {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  fmt.Sprintf("Quota Not Enough, You've already create [%v] challenges", tu.Quota),
 		})
@@ -119,14 +119,14 @@ func challengeRemove(c *gin.Context) {
 	challengeID := c.Request.PostFormValue("cid")
 
 	if !validateUser(uid) {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  "uid: [" + uid + "] not found",
 		})
 		return
 	}
 	if !validateChallenge(challengeID) {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  "challengeID: [" + challengeID + "] not found",
 		})
@@ -135,7 +135,7 @@ func challengeRemove(c *gin.Context) {
 
 	err := challenge.RmChallenge(uid, challengeID)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  err.Error(),
 		})

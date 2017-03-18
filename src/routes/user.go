@@ -20,7 +20,7 @@ func users(c *gin.Context) {
 	user.EmailAddress = ""
 	userMap, err := user.QueryUsersRaw(items)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  err.Error(),
 		})
@@ -45,7 +45,7 @@ func userCreate(c *gin.Context) {
 	inviteBy, err := U.GetInvitedBy(inviteCode)
 	user.Invite.InvitedBy = inviteBy
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  err.Error(),
 		})
@@ -67,7 +67,7 @@ func userCreate(c *gin.Context) {
 	}
 	err = U.AddUser(user)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  err.Error(),
 		})
@@ -101,7 +101,7 @@ func userUpdate(c *gin.Context) {
 	}
 	err := userValidate.ValidateFormat()
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  err.Error(),
 		})
@@ -126,7 +126,7 @@ func userUpdate(c *gin.Context) {
 		update["WebSite"] = userValidate.WebSite
 	}
 	if len(update) == 0 {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  "nothing changed",
 		})
@@ -136,7 +136,7 @@ func userUpdate(c *gin.Context) {
 	update = bson.M{"$set": update}
 	err = user.UpdateUser(update)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  err.Error(),
 		})
@@ -188,7 +188,7 @@ func userChallenges(c *gin.Context) {
 
 	challenges, err := user.QueryUserChallenges([]string{challengeState})
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  err.Error(),
 		})
@@ -217,7 +217,7 @@ func userFollowers(c *gin.Context) {
 	items := []string{"Followers"}
 	quser, err := user.QueryUser(items)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  err.Error(),
 		})
@@ -237,7 +237,7 @@ func userFollowees(c *gin.Context) {
 	items := []string{"Following"}
 	quser, err := user.QueryUser(items)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  err.Error(),
 		})
@@ -264,7 +264,7 @@ func userDelete(c *gin.Context) {
 	if err != nil {
 		errStr := fmt.Sprintf("Remove User Error: [%v]", err)
 		log.Error(errStr)
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  errStr,
 		})

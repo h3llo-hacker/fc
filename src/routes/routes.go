@@ -82,7 +82,7 @@ func listServices(c *gin.Context) {
 		c.JSON(200, services)
 	} else {
 		log.Error(err)
-		c.JSON(500, err)
+		c.JSON(400, err)
 	}
 }
 

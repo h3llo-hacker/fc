@@ -10,7 +10,7 @@ import (
 func templates(c *gin.Context) {
 	templates, err := T.QueryTemplate("all")
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  err.Error(),
 		})
@@ -23,7 +23,7 @@ func templateCreate(c *gin.Context) {
 	templateName := c.Request.PostFormValue("name")
 	file, _, err := c.Request.FormFile("upload")
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  err.Error(),
 		})
@@ -32,7 +32,7 @@ func templateCreate(c *gin.Context) {
 	defer file.Close()
 	fileContentBytes, err := ioutil.ReadAll(file)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  err.Error(),
 		})
@@ -41,7 +41,7 @@ func templateCreate(c *gin.Context) {
 	fileContent := string(fileContentBytes)
 	err = T.InsertTemplate(fileContent, templateName)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  err.Error(),
 		})
@@ -57,7 +57,7 @@ func templateRemove(c *gin.Context) {
 	templateID := c.Request.PostFormValue("id")
 	err := T.RemoveTemplate(templateID)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  err.Error(),
 		})
@@ -73,7 +73,7 @@ func templateQuery(c *gin.Context) {
 	templateID := c.Param("templateID")
 	templates, err := T.QueryTemplate(templateID)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  err.Error(),
 		})
@@ -90,7 +90,7 @@ func templateEnable(c *gin.Context) {
 	templateID := c.Param("templateID")
 	err := T.EnableTemplate(templateID, true)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  "template enabled failed",
 		})
@@ -106,7 +106,7 @@ func templateDisable(c *gin.Context) {
 	templateID := c.Param("templateID")
 	err := T.EnableTemplate(templateID, false)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  "template enabled failed",
 		})
@@ -122,7 +122,7 @@ func templateUpdate(c *gin.Context) {
 	templateID := c.Param("templateID")
 	file, _, err := c.Request.FormFile("upload")
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  err.Error(),
 		})
@@ -131,7 +131,7 @@ func templateUpdate(c *gin.Context) {
 	defer file.Close()
 	fileContentBytes, err := ioutil.ReadAll(file)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  err.Error(),
 		})
@@ -140,7 +140,7 @@ func templateUpdate(c *gin.Context) {
 	fileContent := string(fileContentBytes)
 	err = T.UpdateTemplate(templateID, fileContent)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  err.Error(),
 		})

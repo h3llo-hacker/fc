@@ -2,7 +2,7 @@ package main
 
 import (
 	"config"
-	"encoding/json"
+	"handler/monitor"
 	"net/http"
 	"routes"
 	"time"
@@ -16,13 +16,12 @@ func main() {
 	log.SetLevel(log.DebugLevel)
 
 	// load config
-	conf, err := config.LoadConfig()
+	_, err := config.LoadConfig()
 	if err != nil {
 		panic(err)
 	}
 
-	ccc, _ := json.Marshal(conf)
-	log.Debugln(string(ccc))
+	go monitorTimeoutChallenges()
 
 	router := gin.Default()
 
@@ -38,7 +37,15 @@ func main() {
 
 	err = server.ListenAndServe()
 	if err != nil {
-		log.Errorf("FC Error: %v", err)
+		log.Errorf("FC Start Error: %v", err)
 	}
 	log.Info("FC Exit")
+}
+
+func monitorTimeoutChallenges() {
+	log.Infoln("FC Monitor Started.")
+	for {
+		time.Sleep(1 * time.Minute)
+		monitor.RemoveTimeOutChallenges()
+	}
 }

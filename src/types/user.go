@@ -63,6 +63,7 @@ type User struct {
 	IsActive     bool            `bson:"IsActive"`
 	WebSite      string          `bson:"WebSite",valid:"url"`
 	Invite       Invite_struct   `bson:"Invite"`
+	Rank         int             `bson:"Rank"`
 }
 
 func (user *User) ValidateUser() error {
@@ -82,13 +83,13 @@ func (user *User) ValidateUser() error {
 func (user *User) ValidateFormat() error {
 	// First check email address
 	if user.EmailAddress != "" && !valid.IsEmail(user.EmailAddress) {
-		return errors.New("illegal email format:" + user.EmailAddress)
+		return errors.New("illegal email format: " + user.EmailAddress)
 	}
 
 	// check website
 	if user.WebSite != "" {
 		if !valid.IsURL(user.WebSite) {
-			return errors.New("illegal website format")
+			return errors.New("illegal website format: " + user.WebSite)
 		}
 	}
 

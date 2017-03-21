@@ -2,20 +2,26 @@ package routes
 
 import (
 	"io/ioutil"
+	"strings"
 
 	"github.com/gin-gonic/gin"
+	"gopkg.in/mgo.v2/bson"
 	T "handler/template"
 )
 
 func templates(c *gin.Context) {
-	templates, err := T.QueryTemplate("all")
+	templates, err := T.QueryAllTemplates()
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  err.Error(),
 		})
 	} else {
-		c.JSON(200, templates)
+		c.JSON(200, gin.H{
+			"code": 1,
+			"msg":  "Get Templates ok",
+			"data": templates,
+		})
 	}
 }
 
@@ -23,7 +29,7 @@ func templateCreate(c *gin.Context) {
 	templateName := c.Request.PostFormValue("name")
 	file, _, err := c.Request.FormFile("upload")
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  err.Error(),
 		})
@@ -32,7 +38,7 @@ func templateCreate(c *gin.Context) {
 	defer file.Close()
 	fileContentBytes, err := ioutil.ReadAll(file)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  err.Error(),
 		})
@@ -41,7 +47,7 @@ func templateCreate(c *gin.Context) {
 	fileContent := string(fileContentBytes)
 	err = T.InsertTemplate(fileContent, templateName)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  err.Error(),
 		})
@@ -54,10 +60,10 @@ func templateCreate(c *gin.Context) {
 }
 
 func templateRemove(c *gin.Context) {
-	templateID := c.Request.PostFormValue("id")
+	templateID := c.Param("templateID")
 	err := T.RemoveTemplate(templateID)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  err.Error(),
 		})
@@ -71,26 +77,26 @@ func templateRemove(c *gin.Context) {
 
 func templateQuery(c *gin.Context) {
 	templateID := c.Param("templateID")
-	templates, err := T.QueryTemplate(templateID)
+	template, err := T.QueryTemplate(templateID)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  err.Error(),
 		})
 	} else {
 		c.JSON(200, gin.H{
 			"code": 1,
-			"msg":  "template enabled",
-			"data": templates[0],
+			"msg":  "get template",
+			"data": template,
 		})
 	}
 }
 
 func templateEnable(c *gin.Context) {
 	templateID := c.Param("templateID")
-	err := T.EnableTemplate(templateID, true)
+	err := T.TemplateEnable(templateID, true)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  "template enabled failed",
 		})
@@ -104,43 +110,71 @@ func templateEnable(c *gin.Context) {
 
 func templateDisable(c *gin.Context) {
 	templateID := c.Param("templateID")
-	err := T.EnableTemplate(templateID, false)
+	err := T.TemplateEnable(templateID, false)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
-			"msg":  "template enabled failed",
+			"msg":  "template disabled failed",
 		})
 	} else {
 		c.JSON(200, gin.H{
 			"code": 1,
-			"msg":  "template enabled",
+			"msg":  "template disabled",
 		})
 	}
 }
 
 func templateUpdate(c *gin.Context) {
+	var (
+		fileContent  string
+		templateTags []string
+		updates      = make(map[string]interface{}, 0)
+	)
+
 	templateID := c.Param("templateID")
+	templateName := c.Request.PostFormValue("name")
+	tags := c.Request.PostFormValue("tags")
+	if tags != "" {
+		templateTags = strings.Split(tags, ",")
+	}
 	file, _, err := c.Request.FormFile("upload")
 	if err != nil {
-		c.JSON(500, gin.H{
+		fileContent = ""
+	} else {
+		defer file.Close()
+		fileContentBytes, err := ioutil.ReadAll(file)
+		if err != nil {
+			c.JSON(400, gin.H{
+				"code": 0,
+				"msg":  err.Error(),
+			})
+			return
+		}
+		fileContent = string(fileContentBytes)
+	}
+
+	if fileContent != "" {
+		updates["Content"] = fileContent
+	}
+	if templateTags != nil {
+		updates["Tags"] = templateTags
+	}
+	if templateName != "" {
+		updates["Name"] = templateName
+	}
+
+	if len(updates) == 0 {
+		c.JSON(400, gin.H{
 			"code": 0,
-			"msg":  err.Error(),
+			"msg":  "update is empty.",
 		})
 		return
 	}
-	defer file.Close()
-	fileContentBytes, err := ioutil.ReadAll(file)
+
+	update := bson.M{"$set": updates}
+	err = T.UpdateTemplate(templateID, update)
 	if err != nil {
-		c.JSON(500, gin.H{
-			"code": 0,
-			"msg":  err.Error(),
-		})
-		return
-	}
-	fileContent := string(fileContentBytes)
-	err = T.UpdateTemplate(templateID, fileContent)
-	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  err.Error(),
 		})

@@ -42,7 +42,3 @@ func validateTemplate(templateID string) bool {
 func validateChallenge(challengeID string) bool {
 	return challenge.ChallengeExist(challengeID)
 }
-
-func validateFlag(flag, challengeID string) bool {
-	return challenge.ValidateFlag(flag, challengeID)
-}

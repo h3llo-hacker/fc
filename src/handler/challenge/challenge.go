@@ -59,11 +59,15 @@ func CreateChallenge(userID, templateID, challengeID string) (string, error) {
 
 	log.Debugf("Creating challenge [%v], flag is [%v]", challengeID, flag)
 
-	ts, err := template.QueryTemplate(templateID)
+	t, err := template.QueryTemplate(templateID)
 	if err != nil {
 		return challengeID, err
 	}
-	t := ts[0]
+
+	// check if template is enabled
+	if !t.Enable {
+		return "", fmt.Errorf("Template [%v] Disabled", templateID)
+	}
 
 	// update database first
 	challenge := types.Challenge{
@@ -123,11 +127,15 @@ func CreateChallenge(userID, templateID, challengeID string) (string, error) {
 		if err != nil {
 			log.Errorf("Update Challenge Services Error: [%v]",
 				err)
+			RmChallenge(userID, challengeID)
+			return
 		}
 		// register to etcd
 		err = register.RegisterNewChallenge(challengeID, UrlPrefix, services)
 		if err != nil {
 			log.Errorf("RegisterNewChallenge Error: [%v]", err)
+			RmChallenge(userID, challengeID)
+			return
 		}
 		// update challenge state (running)
 		for i := 0; i < 6; i++ {
@@ -158,7 +166,7 @@ func AllChallenges() ([]types.Challenge, error) {
 	return challenges, nil
 }
 
-func QueryChallenge(filter bson.M) (types.Challenge, error) {
+func QueryChallenge(filter, selector bson.M) (types.Challenge, error) {
 	var challenges []types.Challenge
 
 	mongo, dbName, err := db.MongoConn()
@@ -167,7 +175,7 @@ func QueryChallenge(filter bson.M) (types.Challenge, error) {
 	}
 	db := mongo.DB(dbName)
 	collection := db.C(C)
-	err = collection.Find(filter).Select(nil).All(&challenges)
+	err = collection.Find(filter).Select(selector).All(&challenges)
 	if err != nil {
 		return types.Challenge{}, err
 	}
@@ -193,16 +201,36 @@ func QueryChallenge(filter bson.M) (types.Challenge, error) {
 	return challenges[0], nil
 }
 
+func QueryChallenges(filter, selector bson.M) ([]types.Challenge, error) {
+	var challenges []types.Challenge
+
+	mongo, dbName, err := db.MongoConn()
+	if err != nil {
+		return nil, err
+	}
+	db := mongo.DB(dbName)
+	collection := db.C(C)
+	err = collection.Find(filter).Select(selector).All(&challenges)
+	if err != nil {
+		return nil, err
+	}
+
+	return challenges, nil
+}
+
 func RmChallenge(userID, challengeID string) error {
 	filter := bson.M{"ID": challengeID, "UserID": userID}
-	challenge, err := QueryChallenge(filter)
+	selector := bson.M{"State": 1}
+	challenge, err := QueryChallenge(filter, selector)
 	// important!
 	if err != nil {
 		return fmt.Errorf("Challenge not belong to user")
 	}
-	if challenge.State == "terminated" {
-		return fmt.Errorf("Challenge already removed")
+	if challenge.State != "running" {
+		return fmt.Errorf("Challenge isn't running.")
 	}
+
+	log.Debugf("Remove challenge: [%v]", challengeID)
 
 	// important!
 	if challenge.UserID != userID {
@@ -236,7 +264,9 @@ func RmChallenge(userID, challengeID string) error {
 
 func UpdateUserChallengeState(uid, cid, state string) error {
 	selector := bson.M{"Challenges.ChallengeID": cid}
-	update := bson.M{"$set": bson.M{"Challenges.$.State": state}}
+	u := bson.M{"Challenges.$.State": state,
+		"Challenges.$.FinishTime": time.Now()}
+	update := bson.M{"$set": u}
 	err := db.MongoUpdate("user", selector, update)
 	if err != nil {
 		return err
@@ -266,7 +296,8 @@ func UpdateChallengeState(challengeID, state string) error {
 
 func ChallengeExist(challengeID string) bool {
 	query := bson.M{"ID": challengeID}
-	challenges, err := db.MongoFind(C, query, nil)
+	selector := bson.M{"ID": 1}
+	challenges, err := db.MongoFind(C, query, selector)
 	if err != nil {
 		return false
 	}
@@ -276,16 +307,19 @@ func ChallengeExist(challengeID string) bool {
 	return true
 }
 
-func ValidateFlag(flag, challengeID string) bool {
+func ValidateFlag(flag, challengeID string) (string, bool) {
 	filter := bson.M{"ID": challengeID}
-	challenge, err := QueryChallenge(filter)
+	selector := bson.M{"Flag": 1, "UserID": 1}
+	log.Debugf("Validate flag: [%v], ChallengeID: [%v]",
+		flag, challengeID)
+	challenge, err := QueryChallenge(filter, selector)
 	if err != nil {
-		return false
+		return "", false
 	}
 	if challenge.Flag == flag {
-		return true
+		return challenge.UserID, true
 	}
-	return false
+	return "", false
 }
 
 func updateUserChallengeServices(challengeID string,

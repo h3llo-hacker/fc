@@ -15,12 +15,10 @@ import (
 
 func users(c *gin.Context) {
 	var user U.User
-	items := []string{"UserID", "UserURL", "UserName", "UserNum",
-		"EmailAddress"}
-	user.EmailAddress = ""
+	items := []string{"UserName", "UserURL", "EmailAddress", "UserID", "Rank", "IsActive", "UserNum"}
 	userMap, err := user.QueryUsersRaw(items)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  err.Error(),
 		})
@@ -45,7 +43,7 @@ func userCreate(c *gin.Context) {
 	inviteBy, err := U.GetInvitedBy(inviteCode)
 	user.Invite.InvitedBy = inviteBy
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  err.Error(),
 		})
@@ -67,7 +65,7 @@ func userCreate(c *gin.Context) {
 	}
 	err = U.AddUser(user)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  err.Error(),
 		})
@@ -90,6 +88,7 @@ func userCreate(c *gin.Context) {
 func userUpdate(c *gin.Context) {
 	user := U.User{
 		UserURL: c.Param("userURL"),
+		UserID:  c.Param("userURL"),
 	}
 
 	userValidate := types.User{
@@ -101,7 +100,7 @@ func userUpdate(c *gin.Context) {
 	}
 	err := userValidate.ValidateFormat()
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  err.Error(),
 		})
@@ -126,7 +125,7 @@ func userUpdate(c *gin.Context) {
 		update["WebSite"] = userValidate.WebSite
 	}
 	if len(update) == 0 {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  "nothing changed",
 		})
@@ -136,7 +135,7 @@ func userUpdate(c *gin.Context) {
 	update = bson.M{"$set": update}
 	err = user.UpdateUser(update)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  err.Error(),
 		})
@@ -151,9 +150,9 @@ func userUpdate(c *gin.Context) {
 func userInfo(c *gin.Context) {
 	user := U.User{
 		UserURL: c.Param("userURL"),
+		UserID:  c.Param("userURL"),
 	}
-	items := []string{"UserName", "UserURL", "EmailAddress", "WebSite", "Intro"}
-	quser, err := user.QueryUserRaw(items)
+	quser, err := user.QueryUserRaw(nil)
 	if err != nil {
 		c.JSON(404, gin.H{
 			"code": 0,
@@ -162,8 +161,8 @@ func userInfo(c *gin.Context) {
 	} else {
 		c.JSON(200, gin.H{
 			"code": 1,
-			"msg":  "update ok",
-			"data": quser.(bson.M),
+			"msg":  "get user info ok",
+			"data": quser,
 		})
 	}
 }
@@ -171,6 +170,7 @@ func userInfo(c *gin.Context) {
 func userChallenges(c *gin.Context) {
 	user := U.User{
 		UserURL: c.Param("userURL"),
+		UserID:  c.Param("userURL"),
 	}
 	var challengeState string
 
@@ -182,13 +182,15 @@ func userChallenges(c *gin.Context) {
 		challengeState = "terminated"
 	case "2": // running
 		challengeState = "running"
+	case "3": // succeeded
+		challengeState = "succeeded"
 	default:
 		challengeState = "all"
 	}
 
 	challenges, err := user.QueryUserChallenges([]string{challengeState})
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  err.Error(),
 		})
@@ -206,18 +208,22 @@ func userChallenges(c *gin.Context) {
 			}
 		}(c.ChallengeID)
 	}
-
-	c.JSON(200, challenges)
+	c.JSON(200, gin.H{
+		"code": 1,
+		"msg":  "get user challenges ok",
+		"data": challenges,
+	})
 }
 
 func userFollowers(c *gin.Context) {
 	user := U.User{
 		UserURL: c.Param("userURL"),
+		UserID:  c.Param("userURL"),
 	}
 	items := []string{"Followers"}
 	quser, err := user.QueryUser(items)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  err.Error(),
 		})
@@ -233,11 +239,12 @@ func userFollowers(c *gin.Context) {
 func userFollowees(c *gin.Context) {
 	user := U.User{
 		UserURL: c.Param("userURL"),
+		UserID:  c.Param("userURL"),
 	}
 	items := []string{"Following"}
 	quser, err := user.QueryUser(items)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  err.Error(),
 		})
@@ -255,16 +262,16 @@ func userFollow(c *gin.Context) {
 }
 
 func userDelete(c *gin.Context) {
-	emailAddr := c.PostForm("email")
-	log.Debugf("user email: [%v]", emailAddr)
+	userURL := c.Param(":userURL")
+	log.Debugf("delete user userURL: [%v]", userURL)
 	user := U.User{
-		EmailAddress: emailAddr,
+		UserURL: userURL,
 	}
 	err := user.RmUser()
 	if err != nil {
 		errStr := fmt.Sprintf("Remove User Error: [%v]", err)
 		log.Error(errStr)
-		c.JSON(500, gin.H{
+		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  errStr,
 		})
@@ -282,16 +289,18 @@ func userLogin(c *gin.Context) {
 		Password:     c.PostForm("password"),
 	}
 	log.Debugf("email: [%v], pass:[%v]", user.EmailAddress, user.Password)
-	if !user.CheckLogin() {
+	userID, success := user.CheckLogin()
+	if !success {
 		c.JSON(401, gin.H{
 			"code": 0,
-			"msg":  "login false",
+			"msg":  "login failed",
 		})
 		return
 	}
 	c.JSON(200, gin.H{
 		"code": 1,
-		"msg":  "login true",
+		"msg":  "login successfully",
+		"data": userID,
 	})
 
 	go func() {
@@ -301,8 +310,8 @@ func userLogin(c *gin.Context) {
 			IP:     ip,
 			Region: region,
 			System: types.System_struct{
-				OS: "",
-				UA: c.Request.UserAgent(),
+				OS: c.PostForm("os"),
+				UA: c.PostForm("ua"),
 			},
 			Date: time.Now(),
 		}
@@ -311,4 +320,42 @@ func userLogin(c *gin.Context) {
 			log.Errorf("Update User Login Error: [%v], User: [%v]", err, user.EmailAddress)
 		}
 	}()
+}
+
+func userActive(c *gin.Context) {
+	user := U.User{
+		UserURL: c.Param("userURL"),
+		UserID:  c.Param("userURL"),
+	}
+	err := user.Active(true)
+	if err != nil {
+		c.JSON(500, gin.H{
+			"code": 0,
+			"msg":  err.Error(),
+		})
+	} else {
+		c.JSON(200, gin.H{
+			"code": 1,
+			"msg":  "Active User OK.",
+		})
+	}
+}
+
+func userDeactive(c *gin.Context) {
+	user := U.User{
+		UserURL: c.Param("userURL"),
+		UserID:  c.Param("userURL"),
+	}
+	err := user.Active(false)
+	if err != nil {
+		c.JSON(500, gin.H{
+			"code": 0,
+			"msg":  err.Error(),
+		})
+	} else {
+		c.JSON(200, gin.H{
+			"code": 1,
+			"msg":  "Dective User OK.",
+		})
+	}
 }

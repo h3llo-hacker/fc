@@ -22,7 +22,7 @@ func Test_InsertTemplate(t *testing.T) {
 }
 
 func Test_QueryTemplateAll(t *testing.T) {
-	templates, err := QueryTemplate("all")
+	templates, err := QueryAllTemplates()
 	if err != nil {
 		t.Error(err)
 	} else {
@@ -36,7 +36,7 @@ func Test_QueryTemplateAll(t *testing.T) {
 }
 
 func Test_QueryTemplate(t *testing.T) {
-	templates, err := QueryTemplate("all")
+	templates, err := QueryAllTemplates()
 	if err != nil {
 		t.Error(err)
 	} else {
@@ -45,7 +45,7 @@ func Test_QueryTemplate(t *testing.T) {
 			if err != nil {
 				t.Log(err)
 			}
-			if qt[0].ID == template.ID {
+			if qt.ID == template.ID {
 				t.Log("Test_QueryTemplate OK")
 			} else {
 				t.Error("fail")
@@ -55,7 +55,7 @@ func Test_QueryTemplate(t *testing.T) {
 }
 
 func Test_GenerateComposeFile(t *testing.T) {
-	templates, err := QueryTemplate("all")
+	templates, err := QueryAllTemplates()
 	if err != nil {
 		t.Error(err)
 	}
@@ -69,7 +69,7 @@ func Test_GenerateComposeFile(t *testing.T) {
 }
 
 func Test_RemoveTemplate(t *testing.T) {
-	templates, err := QueryTemplate("all")
+	templates, err := QueryAllTemplates()
 	if err != nil {
 		t.Error(err)
 	} else {

@@ -2,7 +2,7 @@
   "Endpoint": "127.0.0.1:2374",
   "Etcd": {
     "Hosts": [
-      "http://10.170.32.166:2379"
+      "http://127.0.0.1:2379"
     ],
     "User": "username",
     "Pass": "password"
@@ -17,5 +17,6 @@
   "LogLevel": "debug",
   "SendGridKey": "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",
   "InviteMode": false,
-  "ComposeFilePath": "/tmp"
+  "ComposeFilePath": "/tmp",
+  "ChallengeDuration": 72
 }

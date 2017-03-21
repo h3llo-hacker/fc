@@ -28,40 +28,46 @@ func Router(router *gin.Engine) {
 
 	// User
 	router.GET("/users", users)
-	userGroup := router.Group("/user")
+	// uG = user group
+	uG := router.Group("/user")
 	{
-		userGroup.POST("/login", userLogin)
-		userGroup.POST("/create", userCreate)
-		userGroup.DELETE("/delete", userDelete)
-		userGroup.GET("/:userURL", userInfo)
-		userGroup.GET("/:userURL/info", userInfo)
-		userGroup.POST("/follow/:userURL", userFollow)
-		userGroup.POST("/update/:userURL", userUpdate)
-		userGroup.GET("/:userURL/challenges", userChallenges)
+		uG.POST("/login", userLogin)
+		uG.POST("/create", userCreate)
+		uG.GET("/:userURL", userInfo)
+		uG.DELETE("/:userURL/delete", userDelete)
+		uG.GET("/:userURL/info", userInfo)
+		uG.POST("/follow/:userURL", userFollow)
+		uG.POST("/update/:userURL", userUpdate)
+		uG.POST("/active/:userURL", userActive)
+		uG.POST("/deactive/:userURL", userDeactive)
+		uG.GET("/:userURL/challenges", userChallenges)
 		// challenges[?type=0/1/2]
-		userGroup.GET("/:userURL/followers", userFollowers)
-		userGroup.GET("/:userURL/followees", userFollowees)
+		uG.GET("/:userURL/followers", userFollowers)
+		uG.GET("/:userURL/followees", userFollowees)
 	}
 
 	// Challenges
 	router.GET("/challenges", challenges)
-	challengeGroup := router.Group("/challenge")
+	// cG = challenge group
+	cG := router.Group("/challenge")
 	{
-		challengeGroup.GET("/:challengeID", challengeInfo)
-		challengeGroup.POST("/create", challengeCreate)
-		challengeGroup.DELETE("/remove", challengeRemove)
+		cG.GET("/:challengeID", challengeInfo)
+		cG.POST("/validate/:challengeID", challengeValidateFlag)
+		cG.POST("/create", challengeCreate)
+		cG.POST("/remove", challengeRemove)
 	}
 
 	// templates
 	router.GET("/templates", templates)
-	templateGroup := router.Group("/template")
+	// tG = template group
+	tG := router.Group("/template")
 	{
-		templateGroup.GET("/:templateID", templateQuery)
-		templateGroup.POST("/:templateID/enable", templateEnable)
-		templateGroup.POST("/:templateID/disable", templateDisable)
-		templateGroup.POST("/:templateID/update", templateDisable)
-		templateGroup.PUT("/create", templateCreate)
-		templateGroup.DELETE("/remove", templateRemove)
+		tG.POST("/create", templateCreate)
+		tG.GET("/:templateID", templateQuery)
+		tG.POST("/enable/:templateID", templateEnable)
+		tG.POST("/disable/:templateID", templateDisable)
+		tG.POST("/update/:templateID", templateUpdate)
+		tG.DELETE("/:templateID/remove", templateRemove)
 	}
 
 	// list all services

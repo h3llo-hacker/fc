@@ -24,13 +24,14 @@ type Etcd_struct struct {
 }
 
 type Config struct {
-	Endpoint        string       `json:"Endpoint"`
-	Etcd            Etcd_struct  `json:"Etcd"`
-	LogLevel        string       `json:"LogLevel"`
-	SendGridKey     string       `json:"SendGridKey"`
-	InviteMode      bool         `json:"InviteMode"`
-	ComposeFilePath string       `json:"ComposeFilePath"`
-	MongoDB         MongoDB_Conf `json:"MongoDB"`
+	Endpoint          string        `json:"Endpoint"`
+	Etcd              Etcd_struct   `json:"Etcd"`
+	LogLevel          string        `json:"LogLevel"`
+	SendGridKey       string        `json:"SendGridKey"`
+	InviteMode        bool          `json:"InviteMode"`
+	ComposeFilePath   string        `json:"ComposeFilePath"`
+	MongoDB           MongoDB_Conf  `json:"MongoDB"`
+	ChallengeDuration time.Duration `json:"ChallengeDuration"`
 }
 
 var Conf Config

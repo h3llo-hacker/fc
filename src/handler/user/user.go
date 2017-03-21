@@ -59,11 +59,10 @@ func AddUser(user types.User) error {
 }
 
 func (user *User) RmUser() error {
-	if !emailAddrExist(user.EmailAddress) {
-		return fmt.Errorf("User Email [%v] Not Found",
-			user.EmailAddress)
-	}
-	query := bson.M{"EmailAddress": user.EmailAddress}
+	e := bson.M{"EmailAddress": user.EmailAddress}
+	u := bson.M{"UserURL": user.UserURL}
+	i := bson.M{"UserID": user.UserID}
+	query := bson.M{"$or": []bson.M{e, u, i}}
 	err := db.MongoRemove(C, query)
 	if err != nil {
 		log.Errorf("MongoRemove Error: [%v]", err)
@@ -77,6 +76,7 @@ func (user *User) UpdateUser(update bson.M) error {
 	u := bson.M{"UserURL": user.UserURL}
 	i := bson.M{"UserID": user.UserID}
 	query := bson.M{"$or": []bson.M{e, u, i}}
+
 	err := db.MongoUpdate(C, query, update)
 	if err != nil {
 		return fmt.Errorf("update user err: %v", err)
@@ -118,6 +118,8 @@ func (user *User) QueryUser(items []string) (types.User, error) {
 		for _, item := range items {
 			selector[item] = 1
 		}
+	} else {
+		selector = nil
 	}
 	err := db.MongoFindUsers(C, query, selector, &users)
 	if err != nil {
@@ -181,17 +183,14 @@ func (user *User) QueryUsersRaw(items []string) ([]interface{}, error) {
 
 func (user *User) QueryUserRaw(items []string) (interface{}, error) {
 	var (
-		userMap []interface{}
-		query   = bson.M{}
-	)
-	if valid.IsEmail(user.EmailAddress) {
-		query = bson.M{"EmailAddress": user.EmailAddress}
-	} else {
-		query = bson.M{"UserURL": user.UserURL}
-	}
-	if user.EmailAddress == "" && user.UserURL == "" {
+		users []interface{}
 		query = bson.M{}
-	}
+	)
+	e := bson.M{"EmailAddress": user.EmailAddress}
+	i := bson.M{"UserID": user.UserID}
+	u := bson.M{"UserURL": user.UserURL}
+	query = bson.M{"$or": []bson.M{e, u, i}}
+
 	selector := make(bson.M, len(items))
 	selector["_id"] = 0
 	if items != nil {
@@ -199,14 +198,14 @@ func (user *User) QueryUserRaw(items []string) (interface{}, error) {
 			selector[item] = 1
 		}
 	}
-	userMap, err := db.MongoFind(C, query, selector)
+	users, err := db.MongoFind(C, query, selector)
 	if err != nil {
 		return "", err
 	}
-	if len(userMap) == 0 {
+	if len(users) == 0 {
 		return "", errors.New("404")
 	}
-	return userMap[0], nil
+	return users[0], nil
 }
 
 func emailAddrExist(emailAddr string) bool {
@@ -287,20 +286,18 @@ func updateUserRegion(uid, region string) error {
 	return nil
 }
 
-func (user *User) CheckLogin() bool {
-	items := []string{"Password"}
+func (user *User) CheckLogin() (string, bool) {
+	items := []string{"Password", "UserID", "UserName"}
 	u, err := user.QueryUser(items)
 	if err != nil {
 		log.Errorf("Query User Error: [%v]", err)
-		return false
+		return "", false
 	}
 	encPassword := utils.Password(user.Password)
-	// log.Debugf("password: [%v], encPassword: [%v], postPass: [%v]",
-	// u.Password, encPassword, user.Password)
-	if encPassword == u.Password {
-		return true
+	if encPassword != u.Password {
+		return "fail", false
 	}
-	return false
+	return u.UserID, true
 }
 
 // update login times and login infomation
@@ -366,4 +363,13 @@ func (user *User) QueryUserChallenges(state []string) ([]types.UserChallenge, er
 		}
 	}
 	return cs, nil
+}
+
+func (user *User) Active(active bool) error {
+	update := bson.M{"$set": bson.M{"IsActive": active}}
+	err := user.UpdateUser(update)
+	if err != nil {
+		return err
+	}
+	return nil
 }

@@ -45,6 +45,15 @@ docker run -dti --name etcd --network host \
     -e ETCD_LISTEN_CLIENT_URLS=http://${ETH0_IP}:2379 \
     -e ETCD_ADVERTISE_CLIENT_URLS=http://${ETH0_IP}:2379 \
     wrfly/etcd:latest
+
+
+PPP0_IP=$(ip a s ppp0 | grep inet | head -1 | sed "s/.*inet\ \(.*\)\/.*/\1/g")
+docker run -dti --name etcd --network host \
+    -v /home/mr/test/etcd_data:/default.etcd \
+    -e ETCD_LISTEN_PEER_URLS=http://${PPP0_IP}:2380 \
+    -e ETCD_LISTEN_CLIENT_URLS=http://${PPP0_IP}:2379 \
+    -e ETCD_ADVERTISE_CLIENT_URLS=http://${PPP0_IP}:2379 \
+    wrfly/etcd:latest
 ```
 
 # worker node

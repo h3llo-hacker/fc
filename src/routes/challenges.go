@@ -3,6 +3,7 @@ package routes
 import (
 	"fmt"
 	"handler/challenge"
+	"handler/template"
 	"handler/user"
 	"utils"
 
@@ -30,9 +31,9 @@ func challenges(c *gin.Context) {
 func challengeInfo(c *gin.Context) {
 	cid := c.Param("challengeID")
 	filter := bson.M{"ID": cid}
-	challenge, err := challenge.QueryChallenge(filter)
+	challenge, err := challenge.QueryChallenge(filter, nil)
 	if err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(500, gin.H{
 			"code": 0,
 			"msg":  err.Error(),
 		})
@@ -65,13 +66,30 @@ func challengeCreate(c *gin.Context) {
 		return
 	}
 
+	t, err := template.QueryTemplate(templateID)
+	if err != nil {
+		c.JSON(500, gin.H{
+			"code": 0,
+			"msg":  err.Error(),
+		})
+		return
+	}
+	log.Debug(t.Enable)
+	if !t.Enable {
+		c.JSON(400, gin.H{
+			"code": 0,
+			"msg":  "Template [" + t.Name + "] Not Enabled.",
+		})
+		return
+	}
+
 	// check quota
 	u := user.User{
 		UserID: userID,
 	}
 	tu, err := u.QueryUser([]string{"Quota"})
 	if err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(500, gin.H{
 			"code": 0,
 			"msg":  err.Error(),
 		})
@@ -80,7 +98,7 @@ func challengeCreate(c *gin.Context) {
 	challenges, err := u.QueryUserChallenges([]string{"running",
 		"creating", "created"})
 	if err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(500, gin.H{
 			"code": 0,
 			"msg":  err.Error(),
 		})
@@ -101,6 +119,7 @@ func challengeCreate(c *gin.Context) {
 			templateID, challengeID)
 		if err != nil {
 			log.Errorf("CreateChallenge Error: [%v]", err)
+			challenge.RmChallenge(userID, challengeID)
 			challenge.UpdateChallengeState(challengeID, "failed")
 		} else {
 			challenge.UpdateChallengeState(challengeID, "created")
@@ -110,13 +129,12 @@ func challengeCreate(c *gin.Context) {
 		"code": 1,
 		"msg":  "challenge created",
 		"data": challengeID,
-		"id":   challengeID,
 	})
 }
 
 func challengeRemove(c *gin.Context) {
-	uid := c.Request.PostFormValue("uid")
-	challengeID := c.Request.PostFormValue("cid")
+	uid := c.PostForm("uid")
+	challengeID := c.PostForm("cid")
 
 	if !validateUser(uid) {
 		c.JSON(400, gin.H{
@@ -145,4 +163,31 @@ func challengeRemove(c *gin.Context) {
 		"code": 1,
 		"msg":  "challenge removed",
 	})
+}
+
+func challengeValidateFlag(c *gin.Context) {
+	challengeID := c.Param("challengeID")
+	flag := c.Request.PostFormValue("flag")
+	userID, right := challenge.ValidateFlag(flag, challengeID)
+	if right {
+		go func() {
+			err := challenge.RmChallenge(userID, challengeID)
+			if err != nil {
+				log.Errorf("finish challenge and remove it error: [%v], challengeID: [%v]", err, challengeID)
+			}
+			err = challenge.UpdateChallengeState(challengeID, "succeeded")
+			if err != nil {
+				log.Errorf("Update Challenge State Error: [%v], ChallengeID: [%v]", err, challengeID)
+			}
+		}()
+		c.JSON(200, gin.H{
+			"code": 1,
+			"msg":  "flag is right, remove challenge now.",
+		})
+	} else {
+		c.JSON(202, gin.H{
+			"code": 0,
+			"msg":  "flag is wrong, try again later.",
+		})
+	}
 }

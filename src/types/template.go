@@ -3,7 +3,8 @@ package types
 type Template struct {
 	ID      string      `bson:"ID"`
 	Name    string      `bson:"Name"`
-	Display bool        `bson:"Display"`
+	Tags    []string    `bson:Tags`
+	Enable  bool        `bson:"Enable"`
 	Content interface{} `bson:"Content"`
 }
 

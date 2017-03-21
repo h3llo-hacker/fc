@@ -39,7 +39,7 @@ func InsertTemplate(content interface{}, templateName string) error {
 		ID:      templateID,
 		Name:    templateName,
 		Content: content,
-		Display: false,
+		Enable:  false,
 	}
 	err := db.MongoInsert(C, T)
 	if err != nil {
@@ -49,28 +49,59 @@ func InsertTemplate(content interface{}, templateName string) error {
 	return nil
 }
 
-func QueryTemplate(templateID string) (t []types.Template, err error) {
-	query := bson.M{"ID": templateID}
-	selector := bson.M{}
-	if templateID == "all" {
-		query = bson.M{}
-		selector = bson.M{"ID": 1, "Name": 1}
-	}
+func QueryAllTemplates() ([]types.Template, error) {
+	var (
+		query    = bson.M{}
+		selector = bson.M{"ID": 1, "Name": 1, "Enable": 1, "Tags": 1}
+	)
 	templates, err := db.MongoFind(C, query, selector)
 	if err != nil {
 		return nil, err
 	}
 	// 404
 	if len(templates) == 0 {
-		return nil, fmt.Errorf("Template [%v] Not Found", templateID)
+		return nil, fmt.Errorf("Templates Not Found")
 	}
 	Templates := make([]types.Template, len(templates))
 	for i, t := range templates {
+		tt := t.(bson.M)["Tags"].([]interface{})
+		var tags []string
+		for _, ttt := range tt {
+			tags = append(tags, ttt.(string))
+		}
 		Templates[i].ID = t.(bson.M)["ID"].(string)
 		Templates[i].Name = t.(bson.M)["Name"].(string)
-		Templates[i].Content = t.(bson.M)["Content"]
+		Templates[i].Tags = tags
+		Templates[i].Enable = t.(bson.M)["Enable"].(bool)
+		Templates[i].Content = ""
 	}
 	return Templates, nil
+}
+
+func QueryTemplate(templateID string) (types.Template, error) {
+	query := bson.M{"ID": templateID}
+	templates, err := db.MongoFind(C, query, nil)
+	if err != nil {
+		return types.Template{}, err
+	}
+	// 404
+	if len(templates) == 0 {
+		return types.Template{}, fmt.Errorf("Template [%v] Not Found", templateID)
+	}
+	// asign []interface{}
+	t := templates[0].(bson.M)["Tags"].([]interface{})
+	tags := make([]string, len(t))
+	for i, tt := range t {
+		tags[i] = tt.(string)
+	}
+	Template := types.Template{
+		ID:      templates[0].(bson.M)["ID"].(string),
+		Name:    templates[0].(bson.M)["Name"].(string),
+		Enable:  templates[0].(bson.M)["Enable"].(bool),
+		Content: templates[0].(bson.M)["Content"].(string),
+		Tags:    tags,
+	}
+	return Template, nil
 }
 
 func RemoveTemplate(templateID string) error {
@@ -96,7 +127,7 @@ func GenerateComposeFile(templateID, flag string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	f := fmt.Sprintf("%v", template[0].Content)
+	f := fmt.Sprintf("%v", template.Content)
 	ff := strings.Replace(f, "<FLAG>", flag, 99)
 	_, err = file.WriteString(ff)
 	if err != nil {
@@ -114,8 +145,8 @@ func TemplateExist(templateID string) bool {
 	return true
 }
 
-func EnableTemplate(templateID string, enable bool) error {
-	update := bson.M{"$set": bson.M{"Display": enable}}
+func TemplateEnable(templateID string, enable bool) error {
+	update := bson.M{"$set": bson.M{"Enable": enable}}
 	selector := bson.M{"ID": templateID}
 	err := db.MongoUpdate(C, selector, update)
 	if err != nil {
@@ -124,8 +155,7 @@ func EnableTemplate(templateID string, enable bool) error {
 	return nil
 }
 
-func UpdateTemplate(templateID string, content interface{}) error {
-	update := bson.M{"$set": bson.M{"Content": content}}
+func UpdateTemplate(templateID string, update bson.M) error {
 	selector := bson.M{"ID": templateID}
 	err := db.MongoUpdate(C, selector, update)
 	if err != nil {

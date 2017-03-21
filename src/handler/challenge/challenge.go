@@ -232,6 +232,11 @@ func RmChallenge(userID, challengeID string) error {
 
 	log.Debugf("Remove challenge: [%v]", challengeID)
 
+	// important!
+	if challenge.UserID != userID {
+		return fmt.Errorf("Challenge not belong to user")
+	}
+
 	stackName := challengeID
 	endpoint := config.Conf.Endpoint
 	err = docker.RemoveStack(endpoint, stackName)

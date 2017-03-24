@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"handler/challenge"
 	U "handler/user"
+	"strconv"
 	"time"
 	"types"
 	"utils"
@@ -14,9 +15,23 @@ import (
 )
 
 func users(c *gin.Context) {
-	var user U.User
+	var (
+		limit  int
+		offset int
+		user   U.User
+	)
+	limit, err := strconv.Atoi(c.Query("limit"))
+	if err != nil {
+		limit = 5
+		offset = 0
+	}
+	offset, err = strconv.Atoi(c.Query("offset"))
+	if err != nil {
+		limit = 5
+		offset = 0
+	}
 	items := []string{"UserName", "UserURL", "EmailAddress", "UserID", "Rank", "IsActive", "UserNum"}
-	userMap, err := user.QueryUsersRaw(items)
+	userMap, err := user.QueryUsersRaw(items, limit, offset)
 	if err != nil {
 		c.JSON(400, gin.H{
 			"code": 0,
@@ -152,7 +167,17 @@ func userInfo(c *gin.Context) {
 		UserURL: c.Param("userURL"),
 		UserID:  c.Param("userURL"),
 	}
-	quser, err := user.QueryUserRaw(nil)
+	all := c.Query("all")
+	selector := bson.M{
+		"Challenges":       0,
+		"Login.LastLogins": 0,
+		"Password":         0,
+		"Register":         0,
+	}
+	if all == "1" {
+		selector = nil
+	}
+	quser, err := user.QueryUserRaw(selector)
 	if err != nil {
 		c.JSON(404, gin.H{
 			"code": 0,
@@ -180,15 +205,18 @@ func userChallenges(c *gin.Context) {
 		challengeState = "failed"
 	case "1": // terminated
 		challengeState = "terminated"
-	case "2": // running
+	case "2": // running & created
 		challengeState = "running"
 	case "3": // succeeded
 		challengeState = "succeeded"
 	default:
 		challengeState = "all"
 	}
-
-	challenges, err := user.QueryUserChallenges([]string{challengeState})
+	states := []string{challengeState}
+	if challengeState == "running" {
+		states = []string{challengeState, "created"}
+	}
+	challenges, err := user.QueryUserChallenges(states)
 	if err != nil {
 		c.JSON(400, gin.H{
 			"code": 0,
@@ -197,6 +225,17 @@ func userChallenges(c *gin.Context) {
 		return
 	}
 
+	c.JSON(200, gin.H{
+		"code": 1,
+		"msg":  "get user challenges ok",
+		"data": challenges,
+	})
+
+	if challengeState != "all" {
+		return
+	}
+
+	// refreash "created" challenges
 	for _, c := range challenges {
 		if c.State != "created" {
 			continue
@@ -208,11 +247,6 @@ func userChallenges(c *gin.Context) {
 			}
 		}(c.ChallengeID)
 	}
-	c.JSON(200, gin.H{
-		"code": 1,
-		"msg":  "get user challenges ok",
-		"data": challenges,
-	})
 }
 
 func userFollowers(c *gin.Context) {
@@ -262,7 +296,7 @@ func userFollow(c *gin.Context) {
 }
 
 func userDelete(c *gin.Context) {
-	userURL := c.Param(":userURL")
+	userURL := c.Param("userURL")
 	log.Debugf("delete user userURL: [%v]", userURL)
 	user := U.User{
 		UserURL: userURL,
@@ -277,8 +311,8 @@ func userDelete(c *gin.Context) {
 		})
 	} else {
 		c.JSON(200, gin.H{
-			"code": 0,
-			"msg":  "rm user ok",
+			"code": 1,
+			"msg":  "delete user ok",
 		})
 	}
 }

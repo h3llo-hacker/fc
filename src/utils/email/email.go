@@ -11,7 +11,7 @@ import (
 func sendMail() error {
 	from := mail.NewEmail("Example User", "mr@xyv6.com")
 	subject := "Hello World from the SendGrid Go Library"
-	to := mail.NewEmail("Example User", "root@kfd.me")
+	to := mail.NewEmail("Example User", "mr@kfd.me")
 	content := mail.NewContent("text/plain", "some text here")
 	m := mail.NewV3MailInit(from, subject, to, content)
 

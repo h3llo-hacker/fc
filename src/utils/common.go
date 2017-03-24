@@ -2,7 +2,7 @@ package utils
 
 import (
 	"fmt"
-	"strings"
+	// "strings"
 
 	"github.com/nu7hatch/gouuid"
 )
@@ -10,6 +10,7 @@ import (
 func Guuid() string {
 	uid, _ := uuid.NewV4()
 	guuid := fmt.Sprintf("%v", uid)
-	r := strings.Replace(guuid, "-", "", -1)
-	return r
+	return guuid
+	// r := strings.Replace(guuid, "-", "", -1)
+	// return r
 }

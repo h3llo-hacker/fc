@@ -52,56 +52,44 @@ func InsertTemplate(content interface{}, templateName string) error {
 func QueryAllTemplates() ([]types.Template, error) {
 	var (
 		query    = bson.M{}
-		selector = bson.M{"ID": 1, "Name": 1, "Enable": 1, "Tags": 1}
+		selector = bson.M{"Content": 0}
 	)
-	templates, err := db.MongoFind(C, query, selector)
+	mongo, dbName, err := db.MongoConn()
+	if err != nil {
+		return nil, err
+	}
+	db := mongo.DB(dbName)
+	collection := db.C(C)
+	result := make([]types.Template, 0)
+	err = collection.Find(query).Select(selector).All(&result)
 	if err != nil {
 		return nil, err
 	}
 	// 404
-	if len(templates) == 0 {
+	if len(result) == 0 {
 		return nil, fmt.Errorf("Templates Not Found")
 	}
-	Templates := make([]types.Template, len(templates))
-	for i, t := range templates {
-		tt := t.(bson.M)["Tags"].([]interface{})
-		var tags []string
-		for _, ttt := range tt {
-			tags = append(tags, ttt.(string))
-		}
-		Templates[i].ID = t.(bson.M)["ID"].(string)
-		Templates[i].Name = t.(bson.M)["Name"].(string)
-		Templates[i].Tags = tags
-		Templates[i].Enable = t.(bson.M)["Enable"].(bool)
-		Templates[i].Content = ""
-	}
-	return Templates, nil
+	return result, nil
 }
 
 func QueryTemplate(templateID string) (types.Template, error) {
 	query := bson.M{"ID": templateID}
-	templates, err := db.MongoFind(C, query, nil)
+	mongo, dbName, err := db.MongoConn()
+	if err != nil {
+		return types.Template{}, err
+	}
+	db := mongo.DB(dbName)
+	collection := db.C(C)
+	result := make([]types.Template, 0)
+	err = collection.Find(query).Select(nil).All(&result)
 	if err != nil {
 		return types.Template{}, err
 	}
 	// 404
-	if len(templates) == 0 {
-		return types.Template{}, fmt.Errorf("Template [%v] Not Found", templateID)
+	if len(result) != 1 {
+		return types.Template{}, fmt.Errorf("Templates Not Found or multi templates founded.")
 	}
-	// asign []interface{}
-	t := templates[0].(bson.M)["Tags"].([]interface{})
-	tags := make([]string, len(t))
-	for i, tt := range t {
-		tags[i] = tt.(string)
-	}
-	Template := types.Template{
-		ID:      templates[0].(bson.M)["ID"].(string),
-		Name:    templates[0].(bson.M)["Name"].(string),
-		Enable:  templates[0].(bson.M)["Enable"].(bool),
-		Content: templates[0].(bson.M)["Content"].(string),
-		Tags:    tags,
-	}
-	return Template, nil
+	return result[0], nil
 }
 
 func RemoveTemplate(templateID string) error {

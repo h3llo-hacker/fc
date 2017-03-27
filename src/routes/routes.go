@@ -33,6 +33,8 @@ func Router(router *gin.Engine) {
 	{
 		uG.POST("/login", userLogin)
 		uG.POST("/create", userCreate)
+		uG.POST("/resetpasswd", userResetpasswd)
+		uG.POST("/forgetpasswd", userForgetpasswd)
 		uG.GET("/:userURL", userInfo)
 		uG.DELETE("/:userURL/remove", userDelete)
 		uG.GET("/:userURL/info", userInfo)

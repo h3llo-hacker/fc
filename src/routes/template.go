@@ -2,6 +2,7 @@ package routes
 
 import (
 	"io/ioutil"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -10,7 +11,26 @@ import (
 )
 
 func templates(c *gin.Context) {
-	templates, err := T.QueryAllTemplates()
+	var (
+		limit  int
+		offset int
+		tags   string
+		err    error
+	)
+	limit, err = strconv.Atoi(c.Query("limit"))
+	if err != nil {
+		limit = 10
+	}
+	offset, err = strconv.Atoi(c.Query("offset"))
+	if err != nil {
+		offset = 0
+	}
+
+	tags = c.Query("tags")
+
+	Tags := strings.Split(tags, ",")
+
+	templates, err := T.QueryAllTemplates(limit, offset, Tags)
 	if err != nil {
 		c.JSON(400, gin.H{
 			"code": 0,

@@ -23,12 +23,24 @@ type Etcd_struct struct {
 	Pass  string   `json:Pass`
 }
 
+type Mail_Templates struct {
+	ValidateEmail string `json:"ValidateEmail"`
+	ResetPassword string `json:"ResetPassword"`
+}
+
+type Mail_config struct {
+	SendGridKey string         `json:"SendGridKey"`
+	Sender      string         `json:"Sender"`
+	Templates   Mail_Templates `json:"Templates"`
+}
+
 type Config struct {
 	Endpoint          string        `json:"Endpoint"`
 	Etcd              Etcd_struct   `json:"Etcd"`
+	Mail              Mail_config   `json:"Mail"`
 	LogLevel          string        `json:"LogLevel"`
-	SendGridKey       string        `json:"SendGridKey"`
 	InviteMode        bool          `json:"InviteMode"`
+	InviteCodes       int           `json:"InviteCodes"`
 	ComposeFilePath   string        `json:"ComposeFilePath"`
 	MongoDB           MongoDB_Conf  `json:"MongoDB"`
 	ChallengeDuration time.Duration `json:"ChallengeDuration"`

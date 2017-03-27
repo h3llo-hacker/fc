@@ -20,12 +20,10 @@ func challenges(c *gin.Context) {
 	)
 	limit, err := strconv.Atoi(c.Query("limit"))
 	if err != nil {
-		limit = 5
-		offset = 0
+		limit = 10
 	}
 	offset, err = strconv.Atoi(c.Query("offset"))
 	if err != nil {
-		limit = 5
 		offset = 0
 	}
 	challenges, err := challenge.AllChallenges(limit, offset)
@@ -111,7 +109,7 @@ func challengeCreate(c *gin.Context) {
 		return
 	}
 	challenges, err := u.QueryUserChallenges([]string{"running",
-		"creating", "created"})
+		"creating", "created"}, 0, 0)
 	if err != nil {
 		c.JSON(500, gin.H{
 			"code": 0,

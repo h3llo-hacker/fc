@@ -55,7 +55,7 @@ type ResetPwd_struct struct {
 
 type User struct {
 	UserID       string          `bson:"UserID"`
-	UserNum      int             `bson:"UserNum"`
+	UserNum      int64           `bson:"UserNum"`
 	UserName     string          `bson:"UserName"`
 	UserURL      string          `bson:"UserURL"`
 	Password     string          `bson:"Password"`

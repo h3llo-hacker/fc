@@ -22,12 +22,10 @@ func users(c *gin.Context) {
 	)
 	limit, err := strconv.Atoi(c.Query("limit"))
 	if err != nil {
-		limit = 5
-		offset = 0
+		limit = 10
 	}
 	offset, err = strconv.Atoi(c.Query("offset"))
 	if err != nil {
-		limit = 5
 		offset = 0
 	}
 	items := []string{"UserName", "UserURL", "EmailAddress", "UserID", "Rank", "IsActive", "UserNum"}
@@ -49,8 +47,8 @@ func users(c *gin.Context) {
 
 func userCreate(c *gin.Context) {
 	var (
-		user types.User
-		u    U.User
+		user  types.User
+		uUser U.User
 	)
 
 	// Invite Mode
@@ -78,7 +76,7 @@ func userCreate(c *gin.Context) {
 		},
 		Date: time.Now(),
 	}
-	err = U.AddUser(user)
+	userID, err := U.AddUser(user)
 	if err != nil {
 		c.JSON(400, gin.H{
 			"code": 0,
@@ -87,15 +85,16 @@ func userCreate(c *gin.Context) {
 	} else {
 		// older user
 		if user.Invite.InvitedBy != "invite_off" {
-			u.UserID = user.Invite.InvitedBy
-			err = u.RemoveInviteCode(inviteCode)
+			uUser.UserID = user.Invite.InvitedBy
+			err = uUser.RemoveInviteCode(inviteCode)
 			if err != nil {
-				log.Errorf("RemoveInviteCode error: [%v], UserID: [%v]", err, u.UserID)
+				log.Errorf("RemoveInviteCode error: [%v], UserID: [%v]", err, uUser.UserID)
 			}
 		}
 		c.JSON(200, gin.H{
 			"code": 1,
 			"msg":  "create user successfully.",
+			"data": userID,
 		})
 	}
 }
@@ -193,30 +192,41 @@ func userInfo(c *gin.Context) {
 }
 
 func userChallenges(c *gin.Context) {
+	var (
+		challengeState string
+		limit          int
+		offset         int
+	)
 	user := U.User{
 		UserURL: c.Param("userURL"),
 		UserID:  c.Param("userURL"),
 	}
-	var challengeState string
+
+	limit, err := strconv.Atoi(c.Query("limit"))
+	if err != nil {
+		limit = 10
+	}
+	offset, err = strconv.Atoi(c.Query("offset"))
+	if err != nil {
+		offset = 0
+	}
 
 	cType := c.Query("type")
+	states := make([]string, 0)
 	switch cType {
 	case "0": // failed
-		challengeState = "failed"
+		states = []string{"failed"}
 	case "1": // terminated
-		challengeState = "terminated"
+		states = []string{"terminated"}
 	case "2": // running & created
-		challengeState = "running"
+		states = []string{"running", "created"}
 	case "3": // succeeded
-		challengeState = "succeeded"
+		states = []string{"succeeded"}
 	default:
-		challengeState = "all"
+		states = []string{"all"}
 	}
-	states := []string{challengeState}
-	if challengeState == "running" {
-		states = []string{challengeState, "created"}
-	}
-	challenges, err := user.QueryUserChallenges(states)
+
+	challenges, err := user.QueryUserChallenges(states, limit, offset)
 	if err != nil {
 		c.JSON(400, gin.H{
 			"code": 0,
@@ -390,6 +400,51 @@ func userDeactive(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"code": 1,
 			"msg":  "Dective User OK.",
+		})
+	}
+}
+
+func userForgetpasswd(c *gin.Context) {
+	user := U.User{
+		EmailAddress: c.PostForm("email"),
+	}
+	if user.EmailAddress == "" {
+		c.JSON(400, gin.H{
+			"code": 0,
+			"msg":  "email not found",
+		})
+		return
+	}
+	err := user.RestPwd()
+	if err != nil {
+		log.Errorf("reset passwd error: [%v]", err)
+	}
+	c.JSON(200, gin.H{
+		"code": 1,
+		"msg":  "forget password.",
+	})
+}
+
+func userResetpasswd(c *gin.Context) {
+	user := U.User{
+		EmailAddress: c.PostForm("email"),
+		ResetPwd: types.ResetPwd_struct{
+			Code: c.PostForm("code"),
+		},
+	}
+	newPass := c.PostForm("passwd")
+	userID, err := user.DoRestPwd(newPass)
+	if err != nil {
+		log.Errorf("reset password error: [%v]", err)
+		c.JSON(200, gin.H{
+			"code": 0,
+			"msg":  "reset password error",
+		})
+	} else {
+		c.JSON(200, gin.H{
+			"code": 1,
+			"msg":  "reset password.",
+			"data": userID,
 		})
 	}
 }

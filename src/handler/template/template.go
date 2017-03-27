@@ -49,11 +49,16 @@ func InsertTemplate(content interface{}, templateName string) error {
 	return nil
 }
 
-func QueryAllTemplates() ([]types.Template, error) {
+func QueryAllTemplates(limit, offset int, tags []string) ([]types.Template, error) {
 	var (
-		query    = bson.M{}
+		query    = bson.M{"Tags": bson.M{"$all": tags}}
 		selector = bson.M{"Content": 0}
 	)
+
+	if tags[0] == "" {
+		query = bson.M{}
+	}
+
 	mongo, dbName, err := db.MongoConn()
 	if err != nil {
 		return nil, err
@@ -61,14 +66,11 @@ func QueryAllTemplates() ([]types.Template, error) {
 	db := mongo.DB(dbName)
 	collection := db.C(C)
 	result := make([]types.Template, 0)
-	err = collection.Find(query).Select(selector).All(&result)
+	err = collection.Find(query).Select(selector).Limit(limit).Skip(offset).All(&result)
 	if err != nil {
 		return nil, err
 	}
-	// 404
-	if len(result) == 0 {
-		return nil, fmt.Errorf("Templates Not Found")
-	}
+
 	return result, nil
 }
 

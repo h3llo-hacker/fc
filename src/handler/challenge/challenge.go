@@ -44,7 +44,7 @@ func CreateChallenge(userID, templateID, challengeID string) (string, error) {
 
 	// check if user has enough quota
 	challenges, err := user.QueryUserChallenges([]string{"running",
-		"creating", "created"})
+		"creating", "created"}, 0, 0)
 	if err != nil {
 		return "", err
 	}

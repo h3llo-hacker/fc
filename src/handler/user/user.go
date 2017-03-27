@@ -1,6 +1,7 @@
 package user
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -21,16 +22,16 @@ type User types.User
 
 const C = "user"
 
-func AddUser(user types.User) error {
+func AddUser(user types.User) (string, error) {
 	if err := user.ValidateUser(); err != nil {
-		return err
+		return "", err
 	}
 
 	// check if email address was taken
 	query := bson.M{"EmailAddress": user.EmailAddress}
 	users, _ := db.MongoFind(C, query, bson.M{"_id": 1})
 	if len(users) != 0 {
-		return errors.New("Email Address Has Already Used.")
+		return "", errors.New("Email Address Has Already Used.")
 	}
 
 	uid, _ := uuid.NewV4()
@@ -42,7 +43,7 @@ func AddUser(user types.User) error {
 	err := db.MongoInsert(C, user)
 	if err != nil {
 		log.Errorf("MongoInsert Error %v", err)
-		return err
+		return "", err
 	}
 
 	go func() {
@@ -53,14 +54,13 @@ func AddUser(user types.User) error {
 		}
 
 		u := User(user)
-		num := 5 // 5 invite code initially
-		err = u.GenerateInvitecodes(num)
+		err = u.GenerateInvitecodes()
 		if err != nil {
 			log.Errorf("generateInvitecodes error: [%v], UserEmail: [%v]", err, user.EmailAddress)
 		}
 	}()
 
-	return nil
+	return user.UserID, nil
 }
 
 func (user *User) RmUser() error {
@@ -228,20 +228,20 @@ func userUrlExist(userUrl string) bool {
 	return true
 }
 
-func getUserNum() int {
+func getUserNum() int64 {
 	num, err := db.MongoCount(C)
 	if err != nil {
 		return 0
 	}
-	return num
+	return int64(num)
 }
 
-func generateURL(userName string, userNum int) string {
+func generateURL(userName string, userNum int64) string {
 	URL := pinyin.ConvertToPinyinString(userName, "-", pinyin.PINYIN_WITHOUT_TONE)
 	if !userUrlExist(URL) {
 		return URL
 	}
-	source := rand.NewSource(int64(userNum))
+	source := rand.NewSource(userNum)
 	randNum := rand.New(source)
 	uniqNum := randNum.Intn(99)
 	URL += "-" + strconv.Itoa(uniqNum)
@@ -318,7 +318,7 @@ func (user *User) UpdateUserLogin(login types.Register_struct) error {
 	}
 	loginTimes := u.(bson.M)["Login"].(bson.M)["LoginTimes"].(int)
 	if loginTimes > 20 {
-		update := bson.M{"$pop": bson.M{"Login.LastLogins": -10}}
+		update := bson.M{"$pop": bson.M{"Login.LastLogins": -1}}
 		user.UpdateUser(update)
 	}
 	return nil
@@ -336,11 +336,7 @@ func (user *User) UserExist() bool {
 	return true
 }
 
-func (user *User) QueryUserChallenges(state []string) ([]types.UserChallenge, error) {
-	var (
-		users []types.User
-		query = bson.M{}
-	)
+func (user *User) QueryUserChallenges(states []string, limit, skip int) ([]types.UserChallenge, error) {
 
 	if !user.UserExist() {
 		return nil, fmt.Errorf("User Not Found.")
@@ -349,33 +345,72 @@ func (user *User) QueryUserChallenges(state []string) ([]types.UserChallenge, er
 	e := bson.M{"EmailAddress": user.EmailAddress}
 	i := bson.M{"UserID": user.UserID}
 	u := bson.M{"UserURL": user.UserURL}
-	query = bson.M{"$or": []bson.M{e, u, i}}
+	query := bson.M{"$or": []bson.M{e, u, i}}
 
 	selector := bson.M{"Challenges": 1}
-	err := db.MongoFindUsers(C, query, selector, &users)
+
+	mongo, dbName, err := db.MongoConn()
 	if err != nil {
 		return nil, err
 	}
-
+	users := make([]types.User, 0)
+	db := mongo.DB(dbName)
+	collection := db.C(C)
+	err = collection.Find(query).Select(selector).All(&users)
+	if err != nil {
+		return nil, err
+	}
 	if len(users) == 0 {
-		return nil, errors.New("Not found")
+		return nil, nil
 	}
 
-	for _, s := range state {
-		if s == "all" {
-			return users[0].Challenges, nil
-		}
-	}
-
-	cs := make([]types.UserChallenge, 0)
-	for _, c := range users[0].Challenges {
-		for _, s := range state {
-			if c.State == s {
-				cs = append(cs, c)
+	// get the challenges whitch satisfied the states provided
+	temp_user_challenges := make([]types.UserChallenge, 0)
+	if states[0] == "all" {
+		temp_user_challenges = users[0].Challenges
+	} else {
+		for _, uc := range users[0].Challenges {
+			if contains(states, uc.State) {
+				temp_user_challenges = append(temp_user_challenges, uc)
 			}
 		}
 	}
-	return cs, nil
+
+	var userChallenges []types.UserChallenge
+	// reversed user challenges
+	RUCS := reverseChallenges(temp_user_challenges)
+	if skip == 0 && limit == 0 {
+		userChallenges = RUCS
+	} else {
+		start := skip
+		end := skip + limit
+		if start >= len(RUCS) {
+			return nil, nil
+		}
+		if end >= len(RUCS) {
+			end = len(RUCS)
+		}
+		userChallenges = RUCS[start:end]
+	}
+
+	return userChallenges, nil
+
+}
+
+func contains(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}
+
+func reverseChallenges(cs []types.UserChallenge) []types.UserChallenge {
+	for i, j := 0, len(cs)-1; i < j; i, j = i+1, j-1 {
+		cs[i], cs[j] = cs[j], cs[i]
+	}
+	return cs
 }
 
 func (user *User) Active(active bool) error {
@@ -409,27 +444,31 @@ func (user *User) RestPwd() error {
 	}
 
 	// TODO send email
+	urlCode := user.EmailAddress + ":" + resetCode
+	urlParam := base64.StdEncoding.EncodeToString([]byte(urlCode))
+	log.Infof("reset password url: %v", urlParam)
 	log.Infof("User Email: [%v]", user.EmailAddress)
 
 	return nil
 }
 
-func (user *User) DoRestPwd(passwd string) error {
+func (user *User) DoRestPwd(passwd string) (string, error) {
 	if !user.UserExist() {
-		return fmt.Errorf("User Not Found.")
+		return "", fmt.Errorf("User Not Found.")
 	}
 
-	qu, err := user.QueryUser([]string{"ResetPwd"})
+	qu, err := user.QueryUser([]string{"ResetPwd", "UserID"})
 	if qu.ResetPwd.Code != user.ResetPwd.Code {
-		return fmt.Errorf("Code didn't match.")
+		return "", fmt.Errorf("Code didn't match.")
 	}
 	if time.Now().After(qu.ResetPwd.Expire) {
-		return fmt.Errorf("Code Expired.")
+		return "", fmt.Errorf("Code Expired.")
 	}
 
 	go func() {
 		newPwd := utils.Password(passwd)
-		u := bson.M{"Password": newPwd, "ResetPwd.Expire": time.Now()}
+		now := time.Now()
+		u := bson.M{"Password": newPwd, "ResetPwd.Expire": now}
 		update := bson.M{"$set": u}
 		err = user.UpdateUser(update)
 		if err != nil {
@@ -437,5 +476,5 @@ func (user *User) DoRestPwd(passwd string) error {
 		}
 	}()
 
-	return nil
+	return qu.UserID, nil
 }

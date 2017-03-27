@@ -16,7 +16,8 @@
   },
   "LogLevel": "debug",
   "SendGridKey": "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",
-  "InviteMode": false,
+  "InviteMode": true,
+  "InviteCodes": 5,
   "ComposeFilePath": "/tmp",
   "ChallengeDuration": 72
 }

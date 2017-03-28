@@ -53,6 +53,12 @@ type ResetPwd_struct struct {
 	Times  int       `bson:"Times"`
 }
 
+type Verify_struct struct {
+	Verification bool      `bson:"Verification"`
+	Code         string    `bson:"Code"`
+	RequestTime  time.Time `bson:"RequestTime"`
+}
+
 type User struct {
 	UserID       string          `bson:"UserID"`
 	UserNum      int64           `bson:"UserNum"`
@@ -72,6 +78,7 @@ type User struct {
 	Invite       Invite_struct   `bson:"Invite"`
 	Rank         int             `bson:"Rank"`
 	ResetPwd     ResetPwd_struct `bson:"ResetPwd"`
+	Verify       Verify_struct   `bson:"Verify"`
 }
 
 func (user *User) ValidateUser() error {

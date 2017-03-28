@@ -1,6 +1,7 @@
 package user
 
 import (
+	"config"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 	"types"
 	"utils"
 	db "utils/db"
+	"utils/email"
 
 	log "github.com/Sirupsen/logrus"
 	pinyin "github.com/jmz331/gpinyin"
@@ -443,11 +445,24 @@ func (user *User) RestPwd() error {
 		return err
 	}
 
-	// TODO send email
-	urlCode := user.EmailAddress + ":" + resetCode
-	urlParam := base64.StdEncoding.EncodeToString([]byte(urlCode))
-	log.Infof("reset password url: %v", urlParam)
-	log.Infof("User Email: [%v]", user.EmailAddress)
+	qu, _ := user.QueryUser([]string{"UserName"})
+
+	// Send email
+	urlParam := user.EmailAddress + ":" + resetCode
+	b64_urlParam := base64.StdEncoding.EncodeToString([]byte(urlParam))
+	// log.Infof("reset password url: %v", b64_urlParam)
+
+	receiver := types.ValidateEmail{
+		EmailAddr: user.EmailAddress,
+		UserName:  qu.UserName,
+		ClickURL:  config.Conf.Mail.Site + "/resetpwd.php?" + b64_urlParam,
+	}
+
+	if err := email.SendResetPwdEmail(receiver); err != nil {
+		log.Errorf("Send Email Error: [%v]", err)
+		log.Errorf("Trying Again...")
+		return email.SendResetPwdEmail(receiver)
+	}
 
 	return nil
 }
@@ -458,6 +473,9 @@ func (user *User) DoRestPwd(passwd string) (string, error) {
 	}
 
 	qu, err := user.QueryUser([]string{"ResetPwd", "UserID"})
+	if err != nil {
+		return "", err
+	}
 	if qu.ResetPwd.Code != user.ResetPwd.Code {
 		return "", fmt.Errorf("Code didn't match.")
 	}
@@ -477,4 +495,72 @@ func (user *User) DoRestPwd(passwd string) (string, error) {
 	}()
 
 	return qu.UserID, nil
+}
+
+func (user *User) SendVerifyEmail() error {
+	if !user.UserExist() {
+		return fmt.Errorf("User Not Found.")
+	}
+
+	qu, _ := user.QueryUser([]string{"UserName", "Verify"})
+	if qu.Verify.Verification {
+		return fmt.Errorf("You have already verified your email.")
+	}
+
+	rt := qu.Verify.RequestTime.Add(1 * time.Minute)
+	if !time.Now().After(rt) {
+		return fmt.Errorf("Wait 1 minute and try.")
+	}
+
+	// generate verify code and update database
+	uid, _ := uuid.NewV4()
+	Code := strings.ToUpper(fmt.Sprintf("%v", uid)[9:23])
+	s := bson.M{"Verify.Code": Code, "Verify.RequestTime": time.Now()}
+	update := bson.M{"$set": s}
+	err := user.UpdateUser(update)
+	if err != nil {
+		return err
+	}
+
+	// Send email
+	urlParam := user.EmailAddress + ":" + Code
+	b64_urlParam := base64.StdEncoding.EncodeToString([]byte(urlParam))
+
+	receiver := types.ValidateEmail{
+		EmailAddr: user.EmailAddress,
+		UserName:  qu.UserName,
+		ClickURL:  config.Conf.Mail.Site + "/verification.php?" + b64_urlParam,
+	}
+
+	if err := email.SendVerifyEmail(receiver); err != nil {
+		log.Errorf("Send Email Error: [%v]", err)
+		log.Errorf("Trying Again...")
+		return email.SendVerifyEmail(receiver)
+	}
+
+	return nil
+}
+
+func (user *User) VerifyEmail() error {
+	if !user.UserExist() {
+		return fmt.Errorf("User Not Found.")
+	}
+
+	qu, err := user.QueryUser([]string{"Verify"})
+	if err != nil {
+		return err
+	}
+	if qu.Verify.Code != user.Verify.Code {
+		return fmt.Errorf("Code didn't match.")
+	}
+
+	u := bson.M{"Verify.Verification": true}
+	update := bson.M{"$set": u}
+	err = user.UpdateUser(update)
+	if err != nil {
+		log.Errorf("VerifyEmail.UpdateUser Error: [%v]", err)
+		return err
+	}
+
+	return nil
 }

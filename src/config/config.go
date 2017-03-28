@@ -29,9 +29,20 @@ type Mail_Templates struct {
 }
 
 type Mail_config struct {
-	SendGridKey string         `json:"SendGridKey"`
-	Sender      string         `json:"Sender"`
-	Templates   Mail_Templates `json:"Templates"`
+	API struct {
+		User string `json:"User"`
+		Key  string `json:"Key"`
+	} `json:"API"`
+
+	Sender struct {
+		Name string `json:"Name"`
+		Addr string `json:"Addr"`
+	} `json:"Sender"`
+
+	Templates Mail_Templates `json:"Templates"`
+	// for send mail
+	// resetpwd: config.Conf.Mail.Site + "/resetpwd.php?"
+	Site string `json:"Site"`
 }
 
 type Config struct {

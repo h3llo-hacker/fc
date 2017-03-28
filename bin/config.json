@@ -14,8 +14,22 @@
     "Pass": "mpass",
     "DB": "fc"
   },
+  "Mail": {
+    "API": {
+      "User": "h3llo_send_email",
+      "Key": "OULrgIMKfMgFQMph"
+    },
+    "Sender": {
+      "Name": "h3llo.cn",
+      "Addr": "no-reply@h3llo.cn"
+    },
+    "Templates": {
+      "ValidateEmail": "ValidateEmail",
+      "ResetPassword": "ResetPassword"
+    },
+    "Site": "http://h3llo.cn"
+  },
   "LogLevel": "debug",
-  "SendGridKey": "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",
   "InviteMode": true,
   "InviteCodes": 5,
   "ComposeFilePath": "/tmp",

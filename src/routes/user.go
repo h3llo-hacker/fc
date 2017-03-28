@@ -120,6 +120,16 @@ func userUpdate(c *gin.Context) {
 		})
 		return
 	}
+
+	query_user_verification, err := user.QueryUser([]string{"Verify"})
+	if err != nil {
+		c.JSON(400, gin.H{
+			"code": 0,
+			"msg":  err.Error(),
+		})
+		return
+	}
+
 	// UserName, Password, Intro, EmailAddress, WebSite
 	update := make(map[string]interface{}, 0)
 	if userValidate.UserName != "" {
@@ -132,8 +142,10 @@ func userUpdate(c *gin.Context) {
 	if userValidate.Intro != "" {
 		update["Intro"] = userValidate.Intro
 	}
-	if userValidate.EmailAddress != "" {
-		update["EmailAddress"] = userValidate.EmailAddress
+	if !query_user_verification.Verify.Verification {
+		if userValidate.EmailAddress != "" {
+			update["EmailAddress"] = userValidate.EmailAddress
+		}
 	}
 	if userValidate.WebSite != "" {
 		update["WebSite"] = userValidate.WebSite
@@ -445,6 +457,54 @@ func userResetpasswd(c *gin.Context) {
 			"code": 1,
 			"msg":  "reset password.",
 			"data": userID,
+		})
+	}
+}
+
+func userSendVerifyEmail(c *gin.Context) {
+	user := U.User{
+		EmailAddress: c.PostForm("email"),
+	}
+	if user.EmailAddress == "" {
+		c.JSON(400, gin.H{
+			"code": 0,
+			"msg":  "Email not found",
+		})
+		return
+	}
+	err := user.SendVerifyEmail()
+	if err != nil {
+		// log.Errorf("Send Verify Email error: [%v]", err)
+		c.JSON(400, gin.H{
+			"code": 0,
+			"msg":  err.Error(),
+		})
+	} else {
+		c.JSON(200, gin.H{
+			"code": 1,
+			"msg":  "Verify Email Sent.",
+		})
+	}
+}
+
+func userVerifyEmail(c *gin.Context) {
+	user := U.User{
+		EmailAddress: c.PostForm("email"),
+		Verify: types.Verify_struct{
+			Code: c.PostForm("code"),
+		},
+	}
+	err := user.VerifyEmail()
+	if err != nil {
+		log.Errorf("Verify Email error: [%v]", err)
+		c.JSON(400, gin.H{
+			"code": 0,
+			"msg":  "error",
+		})
+	} else {
+		c.JSON(200, gin.H{
+			"code": 1,
+			"msg":  "Verify Email.",
 		})
 	}
 }

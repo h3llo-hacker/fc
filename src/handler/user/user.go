@@ -450,12 +450,12 @@ func (user *User) RestPwd() error {
 	// Send email
 	urlParam := user.EmailAddress + ":" + resetCode
 	b64_urlParam := base64.StdEncoding.EncodeToString([]byte(urlParam))
-	// log.Infof("reset password url: %v", b64_urlParam)
+	log.Debugln(b64_urlParam, utils.BB64(b64_urlParam))
 
 	receiver := types.ValidateEmail{
 		EmailAddr: user.EmailAddress,
 		UserName:  qu.UserName,
-		ClickURL:  config.Conf.Mail.Site + "/resetpwd.php?" + b64_urlParam,
+		ClickURL:  config.Conf.Mail.Site + "/resetpwd.php?" + utils.BB64(b64_urlParam),
 	}
 
 	if err := email.SendResetPwdEmail(receiver); err != nil {
@@ -525,11 +525,11 @@ func (user *User) SendVerifyEmail() error {
 	// Send email
 	urlParam := user.EmailAddress + ":" + Code
 	b64_urlParam := base64.StdEncoding.EncodeToString([]byte(urlParam))
-
+	log.Debugln(b64_urlParam, utils.BB64(b64_urlParam))
 	receiver := types.ValidateEmail{
 		EmailAddr: user.EmailAddress,
 		UserName:  qu.UserName,
-		ClickURL:  config.Conf.Mail.Site + "/verification.php?" + b64_urlParam,
+		ClickURL:  config.Conf.Mail.Site + "/verification.php?" + utils.BB64(b64_urlParam),
 	}
 
 	if err := email.SendVerifyEmail(receiver); err != nil {
@@ -552,6 +552,10 @@ func (user *User) VerifyEmail() error {
 	}
 	if qu.Verify.Code != user.Verify.Code {
 		return fmt.Errorf("Code didn't match.")
+	}
+
+	if qu.Verify.Verification {
+		return fmt.Errorf("You've already verified your email.")
 	}
 
 	u := bson.M{"Verify.Verification": true}

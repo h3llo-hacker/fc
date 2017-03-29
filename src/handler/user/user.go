@@ -40,7 +40,11 @@ func AddUser(user types.User) (string, error) {
 	user.UserID = fmt.Sprintf("%v", uid)
 	user.UserNum = getUserNum()
 	user.UserURL = generateURL(user.UserName, user.UserNum)
-	user.IsActive = false
+	if user.Invite.InvitedBy != "invite_off" {
+		user.IsActive = true
+	} else {
+		user.IsActive = false
+	}
 
 	err := db.MongoInsert(C, user)
 	if err != nil {

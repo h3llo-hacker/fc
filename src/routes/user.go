@@ -46,15 +46,11 @@ func users(c *gin.Context) {
 }
 
 func userCreate(c *gin.Context) {
-	var (
-		user  types.User
-		uUser U.User
-	)
+	var user types.User
 
 	// Invite Mode
 	inviteCode := c.PostForm("invite")
 	inviteBy, err := U.GetInvitedBy(inviteCode)
-	user.Invite.InvitedBy = inviteBy
 	if err != nil {
 		c.JSON(400, gin.H{
 			"code": 0,
@@ -62,6 +58,7 @@ func userCreate(c *gin.Context) {
 		})
 		return
 	}
+	user.Invite.InvitedBy = inviteBy
 
 	user.UserName = c.PostForm("username")
 	user.Password = utils.Password(c.PostForm("password"))
@@ -72,7 +69,7 @@ func userCreate(c *gin.Context) {
 		Region: c.PostForm("ip"),
 		System: types.System_struct{
 			OS: c.PostForm("os"),
-			UA: c.Request.UserAgent(),
+			UA: c.PostForm("ua"),
 		},
 		Date: time.Now(),
 	}
@@ -83,19 +80,22 @@ func userCreate(c *gin.Context) {
 			"msg":  err.Error(),
 		})
 	} else {
-		// older user
-		if user.Invite.InvitedBy != "invite_off" {
-			uUser.UserID = user.Invite.InvitedBy
-			err = uUser.RemoveInviteCode(inviteCode)
-			if err != nil {
-				log.Errorf("RemoveInviteCode error: [%v], UserID: [%v]", err, uUser.UserID)
-			}
-		}
 		c.JSON(200, gin.H{
 			"code": 1,
 			"msg":  "create user successfully.",
 			"data": userID,
 		})
+	}
+
+	// remove inviter's code
+	if user.Invite.InvitedBy != "invite_off" {
+		inviter := U.User{
+			UserID: user.Invite.InvitedBy,
+		}
+		err = inviter.RemoveInviteCode(inviteCode)
+		if err != nil {
+			log.Errorf("RemoveInviteCode error: [%v], UserID: [%v]", err, inviter.UserID)
+		}
 	}
 }
 
@@ -505,6 +505,33 @@ func userVerifyEmail(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"code": 1,
 			"msg":  "Verify Email.",
+		})
+	}
+}
+
+func userAddInviteCodes(c *gin.Context) {
+	user := U.User{
+		UserID: c.PostForm("uid"),
+	}
+	num := c.PostForm("num")
+	number, err := strconv.Atoi(num)
+	if err != nil {
+		c.JSON(400, gin.H{
+			"code": 0,
+			"msg":  err.Error(),
+		})
+	}
+	err = user.AddInvitecodes(number)
+	if err != nil {
+		log.Errorf("Verify Email error: [%v]", err)
+		c.JSON(400, gin.H{
+			"code": 0,
+			"msg":  err.Error(),
+		})
+	} else {
+		c.JSON(200, gin.H{
+			"code": 1,
+			"msg":  "OK",
 		})
 	}
 }

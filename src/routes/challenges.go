@@ -96,11 +96,10 @@ func challengeCreate(c *gin.Context) {
 		return
 	}
 
-	// check quota
 	u := user.User{
 		UserID: userID,
 	}
-	tu, err := u.QueryUser([]string{"Quota"})
+	tu, err := u.QueryUser([]string{"Quota", "IsActive"})
 	if err != nil {
 		c.JSON(500, gin.H{
 			"code": 0,
@@ -108,6 +107,16 @@ func challengeCreate(c *gin.Context) {
 		})
 		return
 	}
+	// check is active
+	if !tu.IsActive {
+		c.JSON(400, gin.H{
+			"code": 0,
+			"msg":  fmt.Sprint("Your account is inactive."),
+		})
+		return
+	}
+
+	// check quota
 	challenges, err := u.QueryUserChallenges([]string{"running",
 		"creating", "created"}, 0, 0)
 	if err != nil {

@@ -32,7 +32,10 @@ func validateAuth(auth string) bool {
 }
 
 func validateUser(uid string) bool {
-	return user.UserExist(uid)
+	u := user.User{
+		UserID: uid,
+	}
+	return u.UserExist()
 }
 
 func validateTemplate(templateID string) bool {

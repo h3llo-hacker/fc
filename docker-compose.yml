@@ -1,3 +1,21 @@
-image: mongo:3.2
-ports:
-  27017:27017
+version: '2'
+services:
+  mongodb:
+    image: mongo:3.2
+    ports: 
+      - 27017:27017
+    volumes:
+      - ./mongodb:/data/db
+      - ./mongocofig:/data/configdb
+  etcd:
+    image: wrfly/etcd:latest
+    network_mode: host
+    volumes:
+      - ./etcd_data:/default.etcd
+  redis:
+    image: redis
+    ports:
+      - 6379:6379
+    command: redis-server --appendonly yes
+    volumes:
+      - ./redis:/data

@@ -4,6 +4,8 @@ import (
 	"config"
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 
 	// valid "github.com/asaskevich/govalidator"
 	// pinyin "github.com/jmz331/gpinyin"
@@ -14,15 +16,31 @@ import (
 	db "utils/db"
 )
 
-func (user *User) GenerateInvitecodes(num int) error {
+func (user *User) GenerateInvitecodes() error {
+	num := config.Conf.InviteCodes
 	codes := make([]string, num)
+	inviteCodes := make([]string, num)
 
 	for i := 0; i < num; i++ {
 		uid, _ := uuid.NewV4()
-		codes[i] = fmt.Sprintf("%v", uid)
+		s := fmt.Sprintf("%v", uid)[9:23]
+		codes[i] = strings.Replace(s, "-", "", -1)
+	}
+	for i, sc := range codes {
+		hex := strconv.FormatInt(user.UserNum, 16)
+
+		nCode := fmt.Sprintf("%v%v", sc[:len(sc)-len(hex)], hex)
+		var Code string
+		for i := 0; i < 3; i++ {
+			s := 4 * i
+			e := s + 4
+			Code += nCode[s:e]
+			Code += "-"
+		}
+		inviteCodes[i] = Code[:len(Code)-1]
 	}
 
-	update := bson.M{"$pushAll": bson.M{"Invite.InviteCodes": codes}}
+	update := bson.M{"$pushAll": bson.M{"Invite.InviteCodes": inviteCodes}}
 	err := user.UpdateUser(update)
 	if err != nil {
 		return err

@@ -46,14 +46,27 @@ type Login_struct struct {
 	LastLogins []Register_struct `bson:"LastLogins"`
 	LoginTimes int               `bson:"LoginTimes"`
 }
+
+type ResetPwd_struct struct {
+	Code   string    `bson:"Code"`
+	Expire time.Time `bson:"Expire"`
+	Times  int       `bson:"Times"`
+}
+
+type Verify_struct struct {
+	Verification bool      `bson:"Verification"`
+	Code         string    `bson:"Code"`
+	RequestTime  time.Time `bson:"RequestTime"`
+}
+
 type User struct {
 	UserID       string          `bson:"UserID"`
-	UserNum      int             `bson:"UserNum"`
+	UserNum      int64           `bson:"UserNum"`
 	UserName     string          `bson:"UserName"`
 	UserURL      string          `bson:"UserURL"`
 	Password     string          `bson:"Password"`
 	Intro        string          `bson:"Intro"`
-	EmailAddress string          `bson:"EmailAddress",valid:"email"`
+	EmailAddress string          `bson:"EmailAddress"`
 	Challenges   []UserChallenge `bson:"Challenges"`
 	Following    []string        `bson:"Following"`
 	Followers    []string        `bson:"Followers"`
@@ -64,6 +77,8 @@ type User struct {
 	WebSite      string          `bson:"WebSite",valid:"url"`
 	Invite       Invite_struct   `bson:"Invite"`
 	Rank         int             `bson:"Rank"`
+	ResetPwd     ResetPwd_struct `bson:"ResetPwd"`
+	Verify       Verify_struct   `bson:"Verify"`
 }
 
 func (user *User) ValidateUser() error {

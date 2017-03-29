@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"handler/challenge"
 	U "handler/user"
+	"strconv"
 	"time"
 	"types"
 	"utils"
@@ -14,9 +15,21 @@ import (
 )
 
 func users(c *gin.Context) {
-	var user U.User
+	var (
+		limit  int
+		offset int
+		user   U.User
+	)
+	limit, err := strconv.Atoi(c.Query("limit"))
+	if err != nil {
+		limit = 10
+	}
+	offset, err = strconv.Atoi(c.Query("offset"))
+	if err != nil {
+		offset = 0
+	}
 	items := []string{"UserName", "UserURL", "EmailAddress", "UserID", "Rank", "IsActive", "UserNum"}
-	userMap, err := user.QueryUsersRaw(items)
+	userMap, err := user.QueryUsersRaw(items, limit, offset)
 	if err != nil {
 		c.JSON(400, gin.H{
 			"code": 0,
@@ -34,8 +47,8 @@ func users(c *gin.Context) {
 
 func userCreate(c *gin.Context) {
 	var (
-		user types.User
-		u    U.User
+		user  types.User
+		uUser U.User
 	)
 
 	// Invite Mode
@@ -63,7 +76,7 @@ func userCreate(c *gin.Context) {
 		},
 		Date: time.Now(),
 	}
-	err = U.AddUser(user)
+	userID, err := U.AddUser(user)
 	if err != nil {
 		c.JSON(400, gin.H{
 			"code": 0,
@@ -72,15 +85,16 @@ func userCreate(c *gin.Context) {
 	} else {
 		// older user
 		if user.Invite.InvitedBy != "invite_off" {
-			u.UserID = user.Invite.InvitedBy
-			err = u.RemoveInviteCode(inviteCode)
+			uUser.UserID = user.Invite.InvitedBy
+			err = uUser.RemoveInviteCode(inviteCode)
 			if err != nil {
-				log.Errorf("RemoveInviteCode error: [%v], UserID: [%v]", err, u.UserID)
+				log.Errorf("RemoveInviteCode error: [%v], UserID: [%v]", err, uUser.UserID)
 			}
 		}
 		c.JSON(200, gin.H{
 			"code": 1,
 			"msg":  "create user successfully.",
+			"data": userID,
 		})
 	}
 }
@@ -106,6 +120,16 @@ func userUpdate(c *gin.Context) {
 		})
 		return
 	}
+
+	query_user_verification, err := user.QueryUser([]string{"Verify"})
+	if err != nil {
+		c.JSON(400, gin.H{
+			"code": 0,
+			"msg":  err.Error(),
+		})
+		return
+	}
+
 	// UserName, Password, Intro, EmailAddress, WebSite
 	update := make(map[string]interface{}, 0)
 	if userValidate.UserName != "" {
@@ -118,8 +142,10 @@ func userUpdate(c *gin.Context) {
 	if userValidate.Intro != "" {
 		update["Intro"] = userValidate.Intro
 	}
-	if userValidate.EmailAddress != "" {
-		update["EmailAddress"] = userValidate.EmailAddress
+	if !query_user_verification.Verify.Verification {
+		if userValidate.EmailAddress != "" {
+			update["EmailAddress"] = userValidate.EmailAddress
+		}
 	}
 	if userValidate.WebSite != "" {
 		update["WebSite"] = userValidate.WebSite
@@ -152,7 +178,17 @@ func userInfo(c *gin.Context) {
 		UserURL: c.Param("userURL"),
 		UserID:  c.Param("userURL"),
 	}
-	quser, err := user.QueryUserRaw(nil)
+	all := c.Query("all")
+	selector := bson.M{
+		"Challenges":       0,
+		"Login.LastLogins": 0,
+		"Password":         0,
+		"Register":         0,
+	}
+	if all == "1" {
+		selector = nil
+	}
+	quser, err := user.QueryUserRaw(selector)
 	if err != nil {
 		c.JSON(404, gin.H{
 			"code": 0,
@@ -168,27 +204,41 @@ func userInfo(c *gin.Context) {
 }
 
 func userChallenges(c *gin.Context) {
+	var (
+		challengeState string
+		limit          int
+		offset         int
+	)
 	user := U.User{
 		UserURL: c.Param("userURL"),
 		UserID:  c.Param("userURL"),
 	}
-	var challengeState string
 
-	cType := c.Query("type")
-	switch cType {
-	case "0": // failed
-		challengeState = "failed"
-	case "1": // terminated
-		challengeState = "terminated"
-	case "2": // running
-		challengeState = "running"
-	case "3": // succeeded
-		challengeState = "succeeded"
-	default:
-		challengeState = "all"
+	limit, err := strconv.Atoi(c.Query("limit"))
+	if err != nil {
+		limit = 10
+	}
+	offset, err = strconv.Atoi(c.Query("offset"))
+	if err != nil {
+		offset = 0
 	}
 
-	challenges, err := user.QueryUserChallenges([]string{challengeState})
+	cType := c.Query("type")
+	states := make([]string, 0)
+	switch cType {
+	case "0": // failed
+		states = []string{"failed"}
+	case "1": // terminated
+		states = []string{"terminated"}
+	case "2": // running & created
+		states = []string{"running", "created"}
+	case "3": // succeeded
+		states = []string{"succeeded"}
+	default:
+		states = []string{"all"}
+	}
+
+	challenges, err := user.QueryUserChallenges(states, limit, offset)
 	if err != nil {
 		c.JSON(400, gin.H{
 			"code": 0,
@@ -197,6 +247,17 @@ func userChallenges(c *gin.Context) {
 		return
 	}
 
+	c.JSON(200, gin.H{
+		"code": 1,
+		"msg":  "get user challenges ok",
+		"data": challenges,
+	})
+
+	if challengeState != "all" {
+		return
+	}
+
+	// refreash "created" challenges
 	for _, c := range challenges {
 		if c.State != "created" {
 			continue
@@ -208,11 +269,6 @@ func userChallenges(c *gin.Context) {
 			}
 		}(c.ChallengeID)
 	}
-	c.JSON(200, gin.H{
-		"code": 1,
-		"msg":  "get user challenges ok",
-		"data": challenges,
-	})
 }
 
 func userFollowers(c *gin.Context) {
@@ -262,7 +318,7 @@ func userFollow(c *gin.Context) {
 }
 
 func userDelete(c *gin.Context) {
-	userURL := c.Param(":userURL")
+	userURL := c.Param("userURL")
 	log.Debugf("delete user userURL: [%v]", userURL)
 	user := U.User{
 		UserURL: userURL,
@@ -277,8 +333,8 @@ func userDelete(c *gin.Context) {
 		})
 	} else {
 		c.JSON(200, gin.H{
-			"code": 0,
-			"msg":  "rm user ok",
+			"code": 1,
+			"msg":  "delete user ok",
 		})
 	}
 }
@@ -356,6 +412,99 @@ func userDeactive(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"code": 1,
 			"msg":  "Dective User OK.",
+		})
+	}
+}
+
+func userForgetpasswd(c *gin.Context) {
+	user := U.User{
+		EmailAddress: c.PostForm("email"),
+	}
+	if user.EmailAddress == "" {
+		c.JSON(400, gin.H{
+			"code": 0,
+			"msg":  "email not found",
+		})
+		return
+	}
+	err := user.RestPwd()
+	if err != nil {
+		log.Errorf("reset passwd error: [%v]", err)
+	}
+	c.JSON(200, gin.H{
+		"code": 1,
+		"msg":  "forget password.",
+	})
+}
+
+func userResetpasswd(c *gin.Context) {
+	user := U.User{
+		EmailAddress: c.PostForm("email"),
+		ResetPwd: types.ResetPwd_struct{
+			Code: c.PostForm("code"),
+		},
+	}
+	newPass := c.PostForm("passwd")
+	userID, err := user.DoRestPwd(newPass)
+	if err != nil {
+		log.Errorf("reset password error: [%v]", err)
+		c.JSON(200, gin.H{
+			"code": 0,
+			"msg":  "reset password error",
+		})
+	} else {
+		c.JSON(200, gin.H{
+			"code": 1,
+			"msg":  "reset password.",
+			"data": userID,
+		})
+	}
+}
+
+func userSendVerifyEmail(c *gin.Context) {
+	user := U.User{
+		EmailAddress: c.PostForm("email"),
+	}
+	if user.EmailAddress == "" {
+		c.JSON(400, gin.H{
+			"code": 0,
+			"msg":  "Email not found",
+		})
+		return
+	}
+	err := user.SendVerifyEmail()
+	if err != nil {
+		// log.Errorf("Send Verify Email error: [%v]", err)
+		c.JSON(400, gin.H{
+			"code": 0,
+			"msg":  err.Error(),
+		})
+	} else {
+		c.JSON(200, gin.H{
+			"code": 1,
+			"msg":  "Verify Email Sent.",
+		})
+	}
+}
+
+func userVerifyEmail(c *gin.Context) {
+	user := U.User{
+		EmailAddress: c.PostForm("email"),
+		Verify: types.Verify_struct{
+			Code: c.PostForm("code"),
+		},
+	}
+	err := user.VerifyEmail()
+	if err != nil {
+		log.Errorf("Verify Email error: [%v]", err)
+		c.JSON(400, gin.H{
+			"code": 0,
+			"msg":  "error",
+		})
+	} else {
+		c.JSON(200, gin.H{
+			"code": 1,
+			"msg":  "Verify Email.",
 		})
 	}
 }

@@ -30,44 +30,44 @@ func TestAddUser(t *testing.T) {
 	user.Intro = "一一"
 
 	t.Log("Add a Validated user...")
-	err := user.AddUser(types.User(user))
+	err := AddUser(types.User(user))
 	if err != nil {
 		t.Errorf("Add User Error: [%v]", err)
 	}
 
 	t.Log("Add a Unvalidated user...")
 	user.EmailAddress = "mr@@kfd.me"
-	err = user.AddUser(types.User(user))
+	err = AddUser(types.User(user))
 	if err == nil {
 		t.Errorf("Add Unvalidated Error %v", err)
 	}
 	t.Logf("Add User Error: [%v]", err)
 }
 
-func TestQueryUserAll(t *testing.T) {
-	var user User
-	user.EmailAddress = ""
-	users, err := user.QueryUserAll(nil)
-	if err != nil {
-		t.Errorf("Query User Error: [%v]", err)
-	}
-	for _, user := range users {
-		t.Log(user)
-	}
-}
+// func TestQueryUserAll(t *testing.T) {
+// 	var user User
+// 	user.EmailAddress = ""
+// 	users, err := user.QueryUserAll(nil)
+// 	if err != nil {
+// 		t.Errorf("Query User Error: [%v]", err)
+// 	}
+// 	for _, user := range users {
+// 		t.Log(user)
+// 	}
+// }
 
-func TestQueryUserWithItem(t *testing.T) {
-	var user User
-	user.EmailAddress = "test@test.com"
-	items := []string{"UserID", "Username", "Password"}
-	users, err := user.QueryUserAll(items)
-	if err != nil {
-		t.Errorf("Query User Error: [%v]", err)
-	}
-	for _, user := range users {
-		t.Log(user)
-	}
-}
+// func TestQueryUserWithItem(t *testing.T) {
+// 	var user User
+// 	user.EmailAddress = "test@test.com"
+// 	items := []string{"UserID", "Username", "Password"}
+// 	users, err := user.QueryUserAll(items)
+// 	if err != nil {
+// 		t.Errorf("Query User Error: [%v]", err)
+// 	}
+// 	for _, user := range users {
+// 		t.Log(user)
+// 	}
+// }
 
 func TestUpdateUser(t *testing.T) {
 	var user User
@@ -89,5 +89,16 @@ func TestRmUser(t *testing.T) {
 		t.Errorf("Remove User Error: [%v]", err)
 	} else {
 		t.Log("Rm User OK.")
+	}
+}
+
+func Test_RestPwd(t *testing.T) {
+	var user User
+	user.EmailAddress = "test@test.com"
+	err := user.RestPwd()
+	if err != nil {
+		t.Errorf("RestPwd Error: [%v]", err)
+	} else {
+		t.Log("RestPwd OK.")
 	}
 }

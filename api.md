@@ -9,26 +9,31 @@
 ## User
 ### `GET    /users`
 ```bash
-[
-    {
-        "EmailAddress": "test@test.com", 
-        "UserName": "名字", 
-        "UserNum": 0, 
-        "UserURL": "ming-zi"
-    }, 
-    {
-        "EmailAddress": "test2@test.com", 
-        "UserName": "名字2", 
-        "UserNum": 1, 
-        "UserURL": "ming-zi-2"
-    }, 
-    {
-        "EmailAddress": "test3@test.com", 
-        "UserName": "名字3", 
-        "UserNum": 2, 
-        "UserURL": "ming-zi-3"
-    }
-]
+{
+    "code": 1, 
+    "data": [
+        {
+            "EmailAddress": "hello@hello.com", 
+            "IsActive": false, 
+            "Rank": 0, 
+            "UserID": "505a9d03-96d5-4a19-44ae-9a49eb382667", 
+            "UserName": "你好", 
+            "UserNum": 0, 
+            "UserURL": "ni-hao"
+        }, 
+        {
+            "EmailAddress": "test@test.com", 
+            "IsActive": false, 
+            "Rank": 0, 
+            "UserID": "5bd7c02a-5b7f-416a-4276-6bcffd66eb0c", 
+            "UserName": "test123", 
+            "UserNum": 1, 
+            "UserURL": "test123"
+        }
+    ], 
+    "msg": "get all users ok"
+}
+
 ```
 ### `POST   /user/login`
 ```bash
@@ -39,7 +44,9 @@ Content-Type: application/json; charset=utf-8
 Date: Wed, 08 Mar 2017 08:02:29 GMT
 
 {
-    "login": "true"
+    "code": 1, 
+    "data": "505a9d03-96d5-4a19-44ae-9a49eb382667", 
+    "msg": "login successfully"
 }
 
 ➜  ~ http --form POST 127.0.0.1:8080/user/login password=c email=test3@test.com
@@ -49,7 +56,8 @@ Content-Type: application/json; charset=utf-8
 Date: Wed, 08 Mar 2017 08:03:23 GMT
 
 {
-    "login": "false"
+    "code": 0, 
+    "msg": "login failed"
 }
 ```
 
@@ -63,8 +71,10 @@ Content-Type: application/json; charset=utf-8
 Date: Wed, 08 Mar 2017 08:05:04 GMT
 
 {
-    "Add user": "OK"
+    "code": 1, 
+    "msg": "create user successfully."
 }
+
 
 ➜  ~ http --form POST 127.1:8080/user/create username=名字3 password=b ip=223.5.5.5 os=linux ua=chrome email=test4@test.com
 HTTP/1.1 500 Internal Server Error
@@ -73,34 +83,50 @@ Content-Type: application/json; charset=utf-8
 Date: Wed, 08 Mar 2017 08:05:23 GMT
 
 {
-    "error": "Email Address Has Already Used."
+    "code": 0, 
+    "msg": "Email Address Has Already Used."
+}
+
+
+```
+
+### `DELETE /user/<userUrl>/delete`
+```bash
+➜  ~ http DELETE "http://127.0.0.1:8080/user/ming-zi/delete"     
+HTTP/1.1 400 Bad Request
+Content-Length: 56
+Content-Type: application/json; charset=utf-8
+Date: Thu, 23 Mar 2017 11:31:03 GMT
+
+{
+    "code": 0, 
+    "msg": "Remove User Error: [User Not Found.]"
+}
+
+➜  ~ http DELETE "http://127.0.0.1:8080/user/ming-zi/delete"
+HTTP/1.1 200 OK
+Content-Length: 30
+Content-Type: application/json; charset=utf-8
+Date: Thu, 23 Mar 2017 11:34:10 GMT
+
+{
+    "code": 1, 
+    "msg": "rm user ok"
 }
 
 ```
 
-### `DELETE /user/delete`
-```bash
-➜  ~ curl -X DELETE -F "email=test1@test.com" "http://127.0.0.1:8080/user/delete"
-{"err":"Remove User Error: [User Email [test1@test.com] Not Found]"}
-
-➜  ~ curl -X DELETE -F "email=test2@test.com" "http://127.0.0.1:8080/user/delete"
-{"err":"Remove User Error: [User Email [test2@test.com] Not Found]"}
-
-➜  ~ curl -X DELETE -F "email=test3@test.com" "http://127.0.0.1:8080/user/delete"
-{"Rm User OK":"OK"}
-➜  ~ 
-```
-
 ### `POST   /user/update/:userURL`
 ```bash
-➜  ~ http --form POST 127.1:8080/user/update/ming-zi password=newPassword
+➜  ~ http --form POST 127.0.0.1:8080/user/update/test123 "username=hello233"
 HTTP/1.1 200 OK
-Content-Length: 18
+Content-Length: 29
 Content-Type: application/json; charset=utf-8
-Date: Wed, 08 Mar 2017 08:05:04 GMT
+Date: Thu, 23 Mar 2017 11:40:00 GMT
 
 {
-    "update": "OK"
+    "code": 1, 
+    "msg": "update ok"
 }
 
 ```
@@ -110,7 +136,7 @@ Date: Wed, 08 Mar 2017 08:05:04 GMT
 (TODO)
 ```bash
 curl -X POST 127.0.0.1:8080/user/follow/ming-zi -F "user=follow_user_url"
-{"follow":"ok"}
+
 # user[ming-zi] follow user[follow_user_url]
 ```
 
@@ -122,12 +148,69 @@ Content-Length: 97
 Content-Type: application/json; charset=utf-8
 Date: Wed, 08 Mar 2017 08:30:02 GMT
 
+➜  ~ http 127.0.0.1:8080/user/test123
+HTTP/1.1 200 OK
+Content-Length: 1005
+Content-Type: application/json; charset=utf-8
+Date: Thu, 23 Mar 2017 11:40:50 GMT
+
 {
-    "EmailAddress": "test@test.com", 
-    "Intro": "", 
-    "UserName": "名字", 
-    "UserURL": "ming-zi", 
-    "WebSite": ""
+    "code": 1, 
+    "data": {
+        "Challenges": [], 
+        "EmailAddress": "test@test.com", 
+        "Followers": [], 
+        "Following": [], 
+        "Intro": "", 
+        "Invite": {
+            "InviteCodes": [
+                "b906f97a-c7aa-4226-66c6-1539c31f1302", 
+                "934cb251-70a2-426b-7050-9e3256f74c99", 
+                "5f2140ba-c69a-40df-765e-2983d6af24ce", 
+                "364be963-be4e-4722-4ad4-8657108da323", 
+                "e0fd50e2-c244-4833-4056-6f94c2d8848c"
+            ], 
+            "InvitedBy": "invite_off"
+        }, 
+        "IsActive": false, 
+        "Login": {
+            "LastLogins": [
+                {
+                    "Date": "2017-03-21T19:36:38.868+08:00", 
+                    "IP": "127.0.0.1", 
+                    "Region": "[保留地址];[];[]", 
+                    "System": {
+                        "OS": "", 
+                        "UA": ""
+                    }
+                }
+            ], 
+            "LoginTimes": 1
+        }, 
+        "Password": "56a4dbd02072cda5832124d62f5a8ce212744e2bff138e2464f42d64de55cc86", 
+        "Quota": 1, 
+        "Rank": 0, 
+        "Register": {
+            "Date": "2017-03-21T19:36:24.693+08:00", 
+            "IP": "127.0.0.1", 
+            "Region": "[未分配或者内网IP];[保留地址];[]", 
+            "System": {
+                "OS": "linux", 
+                "UA": ""
+            }
+        }, 
+        "ResetPwd": {
+            "Code": "58CF-4442", 
+            "Expire": "2017-03-21T23:18:22.878+08:00", 
+            "Times": 3
+        }, 
+        "UserID": "5bd7c02a-5b7f-416a-4276-6bcffd66eb0c", 
+        "UserName": "hello233", 
+        "UserNum": 1, 
+        "UserURL": "test123", 
+        "WebSite": ""
+    }, 
+    "msg": "get user info ok"
 }
 
 ➜  ~ http 127.0.0.1:8080/user/ming-zi     

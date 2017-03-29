@@ -44,7 +44,7 @@ func CreateChallenge(userID, templateID, challengeID string) (string, error) {
 
 	// check if user has enough quota
 	challenges, err := user.QueryUserChallenges([]string{"running",
-		"creating", "created"})
+		"creating", "created"}, 0, 0)
 	if err != nil {
 		return "", err
 	}
@@ -150,7 +150,7 @@ func CreateChallenge(userID, templateID, challengeID string) (string, error) {
 	return challengeID, nil
 }
 
-func AllChallenges() ([]types.Challenge, error) {
+func AllChallenges(limit, skip int) ([]types.Challenge, error) {
 	query := bson.M{}
 	var challenges []types.Challenge
 	mongo, dbName, err := db.MongoConn()
@@ -159,9 +159,12 @@ func AllChallenges() ([]types.Challenge, error) {
 	}
 	db := mongo.DB(dbName)
 	collection := db.C(C)
-	err = collection.Find(query).Select(nil).All(&challenges)
+	err = collection.Find(query).Limit(limit).Skip(skip).All(&challenges)
 	if err != nil {
 		return nil, err
+	}
+	if len(challenges) == 0 {
+		return nil, fmt.Errorf("404 challenges not found")
 	}
 	return challenges, nil
 }
@@ -220,10 +223,11 @@ func QueryChallenges(filter, selector bson.M) ([]types.Challenge, error) {
 
 func RmChallenge(userID, challengeID string) error {
 	filter := bson.M{"ID": challengeID, "UserID": userID}
-	selector := bson.M{"State": 1}
+	selector := bson.M{"State": 1, "UserID": 1}
 	challenge, err := QueryChallenge(filter, selector)
 	// important!
 	if err != nil {
+		log.Errorf("RmChallenge Error: [%v]", err)
 		return fmt.Errorf("Challenge not belong to user")
 	}
 	if challenge.State != "running" {
@@ -234,6 +238,7 @@ func RmChallenge(userID, challengeID string) error {
 
 	// important!
 	if challenge.UserID != userID {
+		log.Debugf("cuid[%v], uid[%v]", challenge.UserID, userID)
 		return fmt.Errorf("Challenge not belong to user")
 	}
 
@@ -263,10 +268,15 @@ func RmChallenge(userID, challengeID string) error {
 }
 
 func UpdateUserChallengeState(uid, cid, state string) error {
-	selector := bson.M{"Challenges.ChallengeID": cid}
-	u := bson.M{"Challenges.$.State": state,
-		"Challenges.$.FinishTime": time.Now()}
+	u := bson.M{}
+	if state == "running" {
+		u = bson.M{"Challenges.$.State": state}
+	} else {
+		u = bson.M{"Challenges.$.State": state,
+			"Challenges.$.FinishTime": time.Now()}
+	}
 	update := bson.M{"$set": u}
+	selector := bson.M{"Challenges.ChallengeID": cid}
 	err := db.MongoUpdate("user", selector, update)
 	if err != nil {
 		return err
@@ -275,8 +285,14 @@ func UpdateUserChallengeState(uid, cid, state string) error {
 }
 
 func UpdateChallengeState(challengeID, state string) error {
+	u := bson.M{}
+	if state == "running" {
+		u = bson.M{"State": state}
+	} else {
+		u = bson.M{"Time.FinishTime": time.Now(), "State": state}
+	}
+	update := bson.M{"$set": u}
 	query := bson.M{"ID": challengeID}
-	update := bson.M{"$set": bson.M{"Time.FinishTime": time.Now(), "State": state}}
 	err := db.MongoUpdate(C, query, update)
 	if err != nil {
 		return err

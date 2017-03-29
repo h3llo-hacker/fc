@@ -5,6 +5,7 @@ import (
 	"handler/challenge"
 	"handler/template"
 	"handler/user"
+	"strconv"
 	"utils"
 
 	log "github.com/Sirupsen/logrus"
@@ -13,7 +14,19 @@ import (
 )
 
 func challenges(c *gin.Context) {
-	challenges, err := challenge.AllChallenges()
+	var (
+		limit  int
+		offset int
+	)
+	limit, err := strconv.Atoi(c.Query("limit"))
+	if err != nil {
+		limit = 10
+	}
+	offset, err = strconv.Atoi(c.Query("offset"))
+	if err != nil {
+		offset = 0
+	}
+	challenges, err := challenge.AllChallenges(limit, offset)
 	if err != nil {
 		c.JSON(400, gin.H{
 			"code": 0,
@@ -96,7 +109,7 @@ func challengeCreate(c *gin.Context) {
 		return
 	}
 	challenges, err := u.QueryUserChallenges([]string{"running",
-		"creating", "created"})
+		"creating", "created"}, 0, 0)
 	if err != nil {
 		c.JSON(500, gin.H{
 			"code": 0,

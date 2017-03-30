@@ -51,6 +51,10 @@ func RegisterNewChallenge(challengeID, UrlPrefix string,
 			return err
 		}
 	}
+	// refresh etcd
+	refresh := "/challenges/refresh"
+	kapi.CreateInOrder(refresh)
+	kapi.DeleteDir(refresh)
 
 	return nil
 }

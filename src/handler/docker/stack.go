@@ -104,6 +104,7 @@ func RemoveStack(endpoint, stackName string) error {
 func PsStack(endpoint, namespace string) ([]swarm.Task, error) {
 	filter := filters.NewArgs()
 	filter.Add("label", convert.LabelNamespace+"="+namespace)
+	filter.Add("desired-state", "running")
 	client, err := DockerCli(endpoint)
 	if err != nil {
 		return nil, err

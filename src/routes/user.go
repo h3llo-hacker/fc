@@ -360,7 +360,7 @@ func userLogin(c *gin.Context) {
 	})
 
 	go func() {
-		ip := c.ClientIP()
+		ip := c.PostForm("ip")
 		region := utils.IP2Region(ip)
 		login := types.Register_struct{
 			IP:     ip,

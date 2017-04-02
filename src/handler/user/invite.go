@@ -9,15 +9,19 @@ import (
 
 	// valid "github.com/asaskevich/govalidator"
 	// pinyin "github.com/jmz331/gpinyin"
+	log "github.com/Sirupsen/logrus"
 	"github.com/nu7hatch/gouuid"
 	"gopkg.in/mgo.v2/bson"
-	// "gopkg.in/mgo.v2/bson"
-	// log "github.com/Sirupsen/logrus"
 	db "utils/db"
 )
 
 func (user *User) GenerateInvitecodes() error {
 	num := config.Conf.InviteCodes
+	log.Infof("Fenerate %d invitecodes for [%v]", num, user.UserID)
+	return user.AddInvitecodes(num)
+}
+
+func (user *User) AddInvitecodes(num int) error {
 	codes := make([]string, num)
 	inviteCodes := make([]string, num)
 

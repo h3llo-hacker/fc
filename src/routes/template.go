@@ -152,6 +152,10 @@ func templateUpdate(c *gin.Context) {
 	)
 
 	templateID := c.Param("templateID")
+
+	Level := c.Request.PostFormValue("level")
+	Tips := c.Request.PostFormValue("tips")
+	Details := c.Request.PostFormValue("details")
 	templateName := c.Request.PostFormValue("name")
 	tags := c.Request.PostFormValue("tags")
 	if tags != "" {
@@ -182,7 +186,15 @@ func templateUpdate(c *gin.Context) {
 	if templateName != "" {
 		updates["Name"] = templateName
 	}
-
+	if Level != "" {
+		updates["Level"] = Level
+	}
+	if Tips != "" {
+		updates["Tips"] = Tips
+	}
+	if Details != "" {
+		updates["Details"] = Details
+	}
 	if len(updates) == 0 {
 		c.JSON(400, gin.H{
 			"code": 0,

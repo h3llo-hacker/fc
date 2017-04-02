@@ -37,8 +37,11 @@ func Router(router *gin.Engine) {
 		uG.POST("/forgetpasswd", userForgetpasswd)
 		uG.POST("/sendverifyemail", userSendVerifyEmail)
 		uG.POST("/verifyemail", userVerifyEmail)
+		uG.POST("/addinvitecodes", userAddInviteCodes)
 		uG.GET("/:userURL", userInfo)
-		uG.DELETE("/:userURL/remove", userDelete)
+		// don't remove user //
+		// uG.DELETE("/:userURL/remove", userDelete)
+		uG.DELETE("/:userURL/remove", userDeactive)
 		uG.GET("/:userURL/info", userInfo)
 		uG.POST("/follow/:userURL", userFollow)
 		uG.POST("/update/:userURL", userUpdate)

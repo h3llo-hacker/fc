@@ -19,8 +19,8 @@ type MongoDB_Conf struct {
 
 type Etcd_struct struct {
 	Hosts []string `json:"Hosts"`
-	User  string   `json:User`
-	Pass  string   `json:Pass`
+	User  string   `json:"User"`
+	Pass  string   `json:"Pass"`
 }
 
 type Mail_Templates struct {

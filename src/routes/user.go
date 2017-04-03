@@ -231,7 +231,7 @@ func userChallenges(c *gin.Context) {
 	case "1": // terminated
 		states = []string{"terminated"}
 	case "2": // running & created
-		states = []string{"running", "created"}
+		states = []string{"running", "created", "creating"}
 	case "3": // succeeded
 		states = []string{"succeeded"}
 	default:

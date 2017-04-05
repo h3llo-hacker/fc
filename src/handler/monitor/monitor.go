@@ -25,6 +25,7 @@ func ScanTimoutChallenges() ([]types.Challenge, error) {
 }
 
 func RemoveTimeOutChallenges() {
+	log.Infof("Scanning TimeOut Challenges at: [%v]", time.Now())
 	TOChallenges, err := ScanTimoutChallenges()
 	if err != nil {
 		log.Errorf("ScanTimeOutChallenge Error: [%v]", err)

@@ -205,9 +205,8 @@ func userInfo(c *gin.Context) {
 
 func userChallenges(c *gin.Context) {
 	var (
-		challengeState string
-		limit          int
-		offset         int
+		limit  int
+		offset int
 	)
 	user := U.User{
 		UserURL: c.Param("userURL"),
@@ -253,16 +252,18 @@ func userChallenges(c *gin.Context) {
 		"data": challenges,
 	})
 
-	if challengeState != "all" {
+	// xxxxxxxxxxxxxxx notice!
+	if cType != "2" && states[0] != "all" {
 		return
 	}
 
 	// refreash "created" challenges
 	for _, c := range challenges {
-		if c.State != "created" {
+		if c.State != "created" && c.State != "creating" {
 			continue
 		}
 		go func(challengeID string) {
+			log.Debugf("RefreshChallengeState: [%s]", challengeID)
 			err = challenge.RefreshChallengeState(challengeID)
 			if err != nil {
 				log.Errorf("RefreshChallengeState Error: [%v]", err)

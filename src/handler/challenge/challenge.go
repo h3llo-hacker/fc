@@ -432,8 +432,8 @@ func RefreshChallengeState(challengeID string) error {
 		}
 	}
 	if running_services != len(tasks) {
-		log.Errorf("Challenge not running, id [%v]", challengeID)
-		return fmt.Errorf("Challenge not running, id [%v]", challengeID)
+		log.Debugf("Challenge not running, id [%v]", challengeID)
+		return nil
 	}
 
 	// update DB

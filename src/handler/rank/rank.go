@@ -28,12 +28,12 @@ func UpdateUsersRank() error {
 		return err
 	}
 	for _, user := range users {
-		go func() {
-			err = updateUserRanks(user.UserID)
-			if err != nil {
-				log.Errorf("Update user[%v]'s Ranks Error:[%v]", user.UserID, err)
-			}
-		}()
+		// DO NOT USE Goroutain
+		err = updateUserRanks(user.UserID)
+		if err != nil {
+			log.Errorf("Update user[%v]'s Ranks Error:[%v]", user.UserID, err)
+		}
+
 	}
 	log.Info("Update Users Ranks Done.")
 	return nil

@@ -1,23 +1,21 @@
 package rank
 
 import (
-	// "config"
-	//	"fmt"
+	"fmt"
 	handlerChallenge "handler/challenge"
 	handlerTemplate "handler/template"
 	handlerUser "handler/user"
 	"strconv"
-	// "strings"
 	"time"
 	"types"
-	// db "utils/db"
+
 	log "github.com/Sirupsen/logrus"
 	"gopkg.in/mgo.v2/bson"
 )
 
 type userSucceedChallenges map[string]time.Duration
 
-var templateScore map[string]int
+var templateScores map[string]float32
 
 func UpdateUsersRank() error {
 	log.Info("Update Users Ranks")
@@ -49,7 +47,30 @@ func getAllValidUser() ([]types.User, error) {
 	return handlerUser.QueryUserAll(items, 0, 0)
 }
 
-func getUserSucceedTemplates(uid string) (userSucceedChallenges, error) {
+func updateUserRanks(uid string) error {
+	rank := float32(0)
+	userSucceedChallenges, err := getUserSucceedChallenges(uid)
+	if err != nil {
+		log.Errorf("updateUserRanks Error:[%v]", err)
+		return err
+	}
+	for templateID, _ := range userSucceedChallenges {
+		if templateScores[templateID] != 0.0 {
+			rank += templateScores[templateID]
+		}
+	}
+	RANK := fmt.Sprintf("%.2f", rank)
+	log.Debugf("User:[%v] Rank:[%v]", uid, RANK)
+
+	// update user's rank
+	update := bson.M{"$set": bson.M{"Rank": RANK}}
+	user := handlerUser.User{
+		UserID: uid,
+	}
+	return user.UpdateUser(update)
+}
+
+func getUserSucceedChallenges(uid string) (userSucceedChallenges, error) {
 	u := handlerUser.User{
 		UserID: uid,
 	}
@@ -65,22 +86,20 @@ func uniqUserChallenges(cs []types.UserChallenge) userSucceedChallenges {
 	for _, c := range cs {
 		if ucs[c.TemplateID] == 0 {
 			ucs[c.TemplateID] = c.FinishTime.Sub(c.CreateTime)
-		} else {
-			if ucs[c.TemplateID] > c.FinishTime.Sub(c.CreateTime) {
-				ucs[c.TemplateID] = c.FinishTime.Sub(c.CreateTime)
-			}
 		}
+		// } else { // TODO where to judge the time user spend on this challenge
+		// 	if ucs[c.TemplateID] > c.FinishTime.Sub(c.CreateTime) {
+		// 		ucs[c.TemplateID] = c.FinishTime.Sub(c.CreateTime)
+		// 	}
+		// }
 	}
 	return ucs
 }
 
-func updateUserRanks(uid string) error {
-	// userSucceedTemplates, err := getUserSucceedTemplates(uid)
-	return nil
-}
-
 // refresh success rate and its score
 func refreshTemplate() error {
+	templateScores = make(map[string]float32, 0)
+
 	templates, err := getAllTemplates()
 	if err != nil {
 		return err
@@ -108,6 +127,8 @@ func refreshTemplate() error {
 		if err != nil {
 			log.Errorf("Update Template Score Error: [%v]", err)
 		}
+		// inject to this dict
+		templateScores[t.ID] = score
 	}
 
 	return nil

@@ -30,9 +30,9 @@ func Test_getAllValidUser(t *testing.T) {
 	}
 }
 
-func Test_getUserSucceedTemplates(t *testing.T) {
+func Test_getUserSucceedChallenges(t *testing.T) {
 	uid := "505a9d03-96d5-4a19-44ae-9a49eb382667"
-	usc, err := getUserSucceedTemplates(uid)
+	usc, err := getUserSucceedChallenges(uid)
 	if err != nil {
 		t.Error(err)
 	}
@@ -50,6 +50,14 @@ func Test_calculateTemplateSuccessRate(t *testing.T) {
 
 func Test_refreshTemplate(t *testing.T) {
 	err := refreshTemplate()
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+// updateUserRanks
+func Test_updateUserRanks(t *testing.T) {
+	err := updateUserRanks("505a9d03-96d5-4a19-44ae-9a49eb382667")
 	if err != nil {
 		t.Error(err)
 	}

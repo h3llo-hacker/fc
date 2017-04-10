@@ -47,15 +47,15 @@ func main() {
 func monitorTimeoutChallenges() {
 	log.Infoln("FC Monitor Started.")
 	for {
-		time.Sleep(1 * time.Minute)
 		monitor.RemoveTimeOutChallenges()
+		time.Sleep(3 * time.Minute)
 	}
 }
 
 func updateUsersRank() {
 	log.Infoln("FC UpdateUsersRank Started.")
 	for {
-		time.Sleep(10 * time.Minute)
 		rank.UpdateUsersRank()
+		time.Sleep(10 * time.Minute)
 	}
 }

@@ -1,13 +1,37 @@
 {
-	"Endpoints":[
-		"127.0.0.1:2374"
-	],
-	"MongoDB":{
-		"Host": "127.0.0.1",
-		"Port": "27017",
-		"User": "muser",
-		"Pass": "mpass",
-        "DB":"fc"
-	},
-	"LogLevel": "debug"
+  "Endpoint": "127.0.0.1:2374",
+  "Etcd": {
+    "Hosts": [
+      "http://127.0.0.1:2379"
+    ],
+    "User": "username",
+    "Pass": "password"
+  },
+  "MongoDB": {
+    "Host": "127.0.0.1",
+    "Port": "27017",
+    "User": "xxx",
+    "Pass": "xxx",
+    "DB": "fc"
+  },
+  "Mail": {
+    "API": {
+      "User": "xxx",
+      "Key": "xxx"
+    },
+    "Sender": {
+      "Name": "h3llo.cn",
+      "Addr": "no-reply@h3llo.cn"
+    },
+    "Templates": {
+      "ValidateEmail": "ValidateEmail",
+      "ResetPassword": "ResetPassword"
+    },
+    "Site": "https://h3llo.cn"
+  },
+  "LogLevel": "debug",
+  "InviteMode": true,
+  "InviteCodes": 5,
+  "ComposeFilePath": "/tmp",
+  "ChallengeDuration": 72
 }

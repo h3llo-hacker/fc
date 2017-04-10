@@ -98,7 +98,7 @@ func (user *User) UpdateUser(update bson.M) error {
 	return nil
 }
 
-func (user *User) QueryUserAll(items []string, limit, skip int) ([]types.User, error) {
+func QueryUserAll(items []string, limit, skip int) ([]types.User, error) {
 	var (
 		users []types.User
 		query = bson.M{}
@@ -376,7 +376,7 @@ func (user *User) QueryUserChallenges(states []string, limit, skip int) ([]types
 		temp_user_challenges = users[0].Challenges
 	} else {
 		for _, uc := range users[0].Challenges {
-			if contains(states, uc.State) {
+			if utils.ArrayContains(states, uc.State) {
 				temp_user_challenges = append(temp_user_challenges, uc)
 			}
 		}
@@ -401,15 +401,6 @@ func (user *User) QueryUserChallenges(states []string, limit, skip int) ([]types
 
 	return userChallenges, nil
 
-}
-
-func contains(s []string, e string) bool {
-	for _, a := range s {
-		if a == e {
-			return true
-		}
-	}
-	return false
 }
 
 func reverseChallenges(cs []types.UserChallenge) []types.UserChallenge {

@@ -28,3 +28,12 @@ func BB64(str string) string {
 	}
 	return fmt.Sprintf("%s%s", s, equals)
 }
+
+func ArrayContains(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}

@@ -19,7 +19,7 @@ type Challenge struct {
 	UserID     string      `bson:"UserID"`
 	Time       Time_struct `bson:"Time"`
 	State      string      `bson:"State"`
-	// creating, terminated, failed, created
+	// creating, terminated, failed, created, succeed
 }
 
 /*

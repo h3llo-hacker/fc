@@ -10,8 +10,8 @@
   "MongoDB": {
     "Host": "127.0.0.1",
     "Port": "27017",
-    "User": "muser",
-    "Pass": "mpass",
+    "User": "",
+    "Pass": "",
     "DB": "fc"
   },
   "Mail": {
@@ -27,7 +27,7 @@
       "ValidateEmail": "ValidateEmail",
       "ResetPassword": "ResetPassword"
     },
-    "Site": "http://h3llo.cn"
+    "Site": "https://h3llo.cn"
   },
   "LogLevel": "debug",
   "InviteMode": true,

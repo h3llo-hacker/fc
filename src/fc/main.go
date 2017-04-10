@@ -3,6 +3,7 @@ package main
 import (
 	"config"
 	"handler/monitor"
+	"handler/rank"
 	"net/http"
 	"routes"
 	"time"
@@ -22,6 +23,7 @@ func main() {
 	}
 
 	go monitorTimeoutChallenges()
+	go updateUsersRank()
 
 	router := gin.Default()
 
@@ -47,5 +49,13 @@ func monitorTimeoutChallenges() {
 	for {
 		time.Sleep(1 * time.Minute)
 		monitor.RemoveTimeOutChallenges()
+	}
+}
+
+func updateUsersRank() {
+	log.Infoln("FC UpdateUsersRank Started.")
+	for {
+		time.Sleep(10 * time.Minute)
+		rank.UpdateUsersRank()
 	}
 }

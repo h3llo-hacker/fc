@@ -28,11 +28,14 @@ func UpdateUsersRank() error {
 		return err
 	}
 	for _, user := range users {
-		err = updateUserRanks(user.UserID)
-		if err != nil {
-			return err
-		}
+		go func() {
+			err = updateUserRanks(user.UserID)
+			if err != nil {
+				log.Errorf("Update user[%v]'s Ranks Error:[%v]", user.UserID, err)
+			}
+		}()
 	}
+	log.Info("Update Users Ranks Done.")
 	return nil
 }
 

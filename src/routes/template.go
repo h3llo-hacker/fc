@@ -76,6 +76,7 @@ func templateCreate(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"code": 1,
 		"msg":  "Insert Template ok",
+		"data": templateID,
 	})
 }
 

@@ -27,9 +27,9 @@ func uniqTemplate(templateName string) bool {
 	return false
 }
 
-func InsertTemplate(content interface{}, templateName string) error {
+func InsertTemplate(content interface{}, templateName string) (string, error) {
 	if !uniqTemplate(templateName) {
-		return fmt.Errorf("Template [%v] Exist", templateName)
+		return "", fmt.Errorf("Template [%v] Exist", templateName)
 	}
 
 	uid, _ := uuid.NewV4()
@@ -43,10 +43,10 @@ func InsertTemplate(content interface{}, templateName string) error {
 	}
 	err := db.MongoInsert(C, T)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	return nil
+	return templateID, nil
 }
 
 func QueryAllTemplates(limit, offset int, tags []string) ([]types.Template, error) {

@@ -65,7 +65,7 @@ func templateCreate(c *gin.Context) {
 		return
 	}
 	fileContent := string(fileContentBytes)
-	err = T.InsertTemplate(fileContent, templateName)
+	templateID, err := T.InsertTemplate(fileContent, templateName)
 	if err != nil {
 		c.JSON(400, gin.H{
 			"code": 0,
@@ -76,6 +76,7 @@ func templateCreate(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"code": 1,
 		"msg":  "Insert Template ok",
+		"data": templateID,
 	})
 }
 

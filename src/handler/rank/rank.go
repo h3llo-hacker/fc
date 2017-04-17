@@ -176,7 +176,8 @@ func calculateTemplateSuccessRate(templateID string) float32 {
 	if total == 0 {
 		return 0
 	}
-	rate := float32(success) / float32(total)
+	// total + 1 : to prevent there is only one challenge deployed and if he secceed, he will got no rank. That's not fair.
+	rate := float32(success) / float32(total+1)
 	log.Debugf("template:[%v] success rate: [%v]", templateID, rate)
 	return rate
 }

@@ -21,13 +21,16 @@ import (
 
 var (
 	C          = "challenges"
-	createLock sync.Mutex
+	createLock = make(map[string]sync.Locker, 0)
 )
 
 func CreateChallenge(userID, templateID, challengeID string) (string, error) {
 
-	createLock.Lock()
-	defer createLock.Unlock()
+	if createLock[userID] == nil {
+		createLock[userID] = &sync.Mutex{}
+	}
+	createLock[userID].Lock()
+	defer createLock[userID].Unlock()
 
 	var user U.User
 	user.UserID = userID

@@ -100,8 +100,11 @@ func CreateChallenge(userID, templateID, challengeID string) (string, error) {
 		return challengeID, err
 	}
 
-	// generate a compose file with the given flag
-	composeFile, err := template.GenerateComposeFile(templateID, flag)
+	// generate a compose file with the env
+	env := make(map[string]string, 0)
+	env["<FLAG>"] = flag
+	env["<URL>"] = UrlPrefix + config.Conf.AppDomain
+	composeFile, err := template.GenerateComposeFile(templateID, env)
 	if err != nil {
 		return challengeID, err
 	}

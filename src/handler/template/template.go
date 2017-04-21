@@ -103,7 +103,7 @@ func RemoveTemplate(templateID string) error {
 	return nil
 }
 
-func GenerateComposeFile(templateID, flag string) (string, error) {
+func GenerateComposeFile(templateID string, ENV map[string]string) (string, error) {
 	FilePath := config.Conf.ComposeFilePath
 	log.Debugln("Composefile path: " + FilePath)
 	templateFilePath := FilePath + "/" + templateID + "_docker-compose.yml"
@@ -117,9 +117,11 @@ func GenerateComposeFile(templateID, flag string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	f := fmt.Sprintf("%v", template.Content)
-	ff := strings.Replace(f, "<FLAG>", flag, 99)
-	_, err = file.WriteString(ff)
+	template_content := fmt.Sprintf("%v", template.Content)
+	for k, v := range ENV {
+		template_content = strings.Replace(template_content, k, v, 99)
+	}
+	_, err = file.WriteString(template_content)
 	if err != nil {
 		return "", err
 	}

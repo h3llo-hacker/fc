@@ -59,7 +59,9 @@ func Test_GenerateComposeFile(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	filepath, err := GenerateComposeFile(templates[0].ID, "flag{hello-world}")
+	env := make(map[string]string, 0)
+	env["<FLAG>"] = "flag{hello-world}"
+	filepath, err := GenerateComposeFile(templates[0].ID, env)
 	if err != nil {
 		t.Error(err)
 	} else {

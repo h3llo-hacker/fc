@@ -47,6 +47,7 @@ type Mail_config struct {
 
 type Config struct {
 	Endpoint          string        `json:"Endpoint"`
+	AppDomain         string        `json:"AppDomain"`
 	Etcd              Etcd_struct   `json:"Etcd"`
 	Mail              Mail_config   `json:"Mail"`
 	LogLevel          string        `json:"LogLevel"`

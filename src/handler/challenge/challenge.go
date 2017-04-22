@@ -21,13 +21,16 @@ import (
 
 var (
 	C          = "challenges"
-	createLock sync.Mutex
+	createLock = make(map[string]sync.Locker, 0)
 )
 
 func CreateChallenge(userID, templateID, challengeID string) (string, error) {
 
-	createLock.Lock()
-	defer createLock.Unlock()
+	if createLock[userID] == nil {
+		createLock[userID] = &sync.Mutex{}
+	}
+	createLock[userID].Lock()
+	defer createLock[userID].Unlock()
 
 	var user U.User
 	user.UserID = userID
@@ -97,8 +100,11 @@ func CreateChallenge(userID, templateID, challengeID string) (string, error) {
 		return challengeID, err
 	}
 
-	// generate a compose file with the given flag
-	composeFile, err := template.GenerateComposeFile(templateID, flag)
+	// generate a compose file with the env
+	env := make(map[string]string, 0)
+	env["<FLAG>"] = flag
+	env["<URL>"] = UrlPrefix + config.Conf.AppDomain
+	composeFile, err := template.GenerateComposeFile(templateID, env)
 	if err != nil {
 		return challengeID, err
 	}

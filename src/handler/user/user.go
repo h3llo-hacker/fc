@@ -563,3 +563,79 @@ func (user *User) VerifyEmail() error {
 
 	return nil
 }
+
+func (user *User) addFollowing(uid string) error {
+	u := bson.M{"Following": uid}
+	update := bson.M{"$push": u}
+	err := user.UpdateUser(update)
+	if err != nil {
+		log.Errorf("addFollowing Error: [%v]", err)
+		return err
+	}
+	return nil
+}
+
+func (user *User) rmFollowing(uid string) error {
+	u := bson.M{"Following": uid}
+	update := bson.M{"$pull": u}
+	err := user.UpdateUser(update)
+	if err != nil {
+		log.Errorf("rmFollowing Error: [%v]", err)
+		return err
+	}
+	return nil
+}
+
+func (user *User) addFollower(uid string) error {
+	u := bson.M{"Followers": uid}
+	update := bson.M{"$push": u}
+	err := user.UpdateUser(update)
+	if err != nil {
+		log.Errorf("addFollower Error: [%v]", err)
+		return err
+	}
+	return nil
+}
+
+func (user *User) rmFollower(uid string) error {
+	u := bson.M{"Followers": uid}
+	update := bson.M{"$pull": u}
+	err := user.UpdateUser(update)
+	if err != nil {
+		log.Errorf("rmFollower Error: [%v]", err)
+		return err
+	}
+	return nil
+}
+
+func (user *User) Follow(action string, targetUser User) error {
+	if !user.UserExist() {
+		return fmt.Errorf("User Not Found.")
+	}
+
+	if !targetUser.UserExist() {
+		return fmt.Errorf("targetUser Not Found.")
+	}
+
+	if action == "follow" {
+		err := user.addFollowing(targetUser.UserID)
+		if err != nil {
+			return err
+		}
+		err = targetUser.addFollower(user.UserID)
+		if err != nil {
+			return err
+		}
+	} else {
+		err := user.rmFollowing(targetUser.UserID)
+		if err != nil {
+			return err
+		}
+		err = targetUser.rmFollower(user.UserID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}

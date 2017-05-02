@@ -315,6 +315,33 @@ func userFollowees(c *gin.Context) {
 }
 
 func userFollow(c *gin.Context) {
+	user := U.User{
+		UserID: c.Param("userID"),
+	}
+	targetUser := U.User{
+		UserID: c.PostForm("tuid"), //target userID
+	}
+	action := c.PostForm("action") // follow/unfollow
+
+	if action == "follow" || action == "unfollow" {
+		err := user.Follow(action, targetUser)
+		if err != nil {
+			c.JSON(400, gin.H{
+				"code": 0,
+				"msg":  err.Error(),
+			})
+		} else {
+			c.JSON(200, gin.H{
+				"code": 1,
+				"msg":  action + " user ok",
+			})
+		}
+	} else {
+		c.JSON(400, gin.H{
+			"code": 0,
+			"msg":  "action not found!",
+		})
+	}
 
 }
 

@@ -43,7 +43,7 @@ func Router(router *gin.Engine) {
 		// uG.DELETE("/:userURL/remove", userDelete)
 		uG.DELETE("/:userURL/remove", userDeactive)
 		uG.GET("/:userURL/info", userInfo)
-		uG.POST("/follow/:userURL", userFollow)
+		uG.POST("/follow/:userID", userFollow)
 		uG.POST("/update/:userURL", userUpdate)
 		uG.POST("/active/:userURL", userActive)
 		uG.POST("/deactive/:userURL", userDeactive)

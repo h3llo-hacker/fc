@@ -18,7 +18,7 @@ type userSucceedChallenges map[string]time.Duration
 var templateScores map[string]float32
 
 func UpdateUsersRank() error {
-	log.Info("Update Users Ranks")
+	log.Info("Update Users Rank")
 
 	// update templates' success rate and calculate its scroe
 	refreshTemplate()
@@ -29,13 +29,13 @@ func UpdateUsersRank() error {
 	}
 	for _, user := range users {
 		// DO NOT USE Goroutain
-		err = updateUserRanks(user.UserID)
+		err = updateUserRank(user.UserID)
 		if err != nil {
-			log.Errorf("Update user[%v]'s Ranks Error:[%v]", user.UserID, err)
+			log.Errorf("Update user[%v]'s Rank Error:[%v]", user.UserID, err)
 		}
 
 	}
-	log.Info("Update Users Ranks Done.")
+	log.Info("Update Users Rank Done.")
 	return nil
 }
 
@@ -50,11 +50,11 @@ func getAllValidUser() ([]types.User, error) {
 	return handlerUser.QueryUserAll(items, 0, 0)
 }
 
-func updateUserRanks(uid string) error {
+func updateUserRank(uid string) error {
 	rank := float32(0)
 	userSucceedChallenges, err := getUserSucceedChallenges(uid)
 	if err != nil {
-		log.Errorf("updateUserRanks Error:[%v]", err)
+		log.Errorf("updateUserRank Error:[%v]", err)
 		return err
 	}
 	for templateID, _ := range userSucceedChallenges {
@@ -145,7 +145,7 @@ func calculateTemplateScore(template types.Template) float32 {
 	levelN, err := strconv.Atoi(level)
 	if err != nil {
 		levelN = 1
-		log.Errorf("Ranks -> calculateTemplateScore Error: [%v]", err)
+		log.Errorf("Rank -> calculateTemplateScore Error: [%v]", err)
 	}
 	rate := template.SuccRate
 
@@ -162,7 +162,7 @@ func calculateTemplateSuccessRate(templateID string) float32 {
 	selector := bson.M{"UserID": 1, "State": 1}
 	challenges, err := handlerChallenge.QueryChallenges(filter, selector)
 	if err != nil {
-		log.Errorf("update users ranks -> calculate template success rate Error:[%v]", err)
+		log.Errorf("update users rank -> calculate template success rate Error:[%v]", err)
 	}
 
 	UniqChallenges := uniqChallenges(challenges)

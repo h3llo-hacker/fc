@@ -85,16 +85,16 @@ func userCreate(c *gin.Context) {
 			"msg":  "create user successfully.",
 			"data": userID,
 		})
-	}
 
-	// remove inviter's code
-	if user.Invite.InvitedBy != "invite_off" {
-		inviter := U.User{
-			UserID: user.Invite.InvitedBy,
-		}
-		err = inviter.RemoveInviteCode(inviteCode)
-		if err != nil {
-			log.Errorf("RemoveInviteCode error: [%v], UserID: [%v]", err, inviter.UserID)
+		// remove inviter's code
+		if user.Invite.InvitedBy != "invite_off" {
+			inviter := U.User{
+				UserID: user.Invite.InvitedBy,
+			}
+			err = inviter.RemoveInviteCode(inviteCode)
+			if err != nil {
+				log.Errorf("RemoveInviteCode error: [%v], UserID: [%v]", err, inviter.UserID)
+			}
 		}
 	}
 }

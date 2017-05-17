@@ -57,7 +57,7 @@ func GetInvitedBy(inviteCode string) (string, error) {
 		return "invite_off", nil
 	}
 
-	query := bson.M{"Invite.InviteCodes": strings.ToUpper(inviteCode)}
+	query := bson.M{"Invite.InviteCodes": strings.ToLower(inviteCode)}
 	selector := bson.M{}
 	selector["UserID"] = 1
 	user, err := db.MongoFind(C, query, selector)

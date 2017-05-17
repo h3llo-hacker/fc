@@ -52,6 +52,7 @@ func userCreate(c *gin.Context) {
 	inviteCode := c.PostForm("invite")
 	inviteBy, err := U.GetInvitedBy(inviteCode)
 	if err != nil {
+		log.Errorf("userCreate GetInvitedBy Error: [%v]", err)
 		c.JSON(400, gin.H{
 			"code": 0,
 			"msg":  err.Error(),

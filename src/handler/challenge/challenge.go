@@ -144,7 +144,7 @@ func CreateChallenge(userID, templateID, challengeID string) (string, error) {
 			return
 		}
 		// update challenge state (running)
-		for i := 0; i < 6; i++ {
+		for i := 0; i < 12; i++ {
 			time.Sleep(10 * time.Second)
 			err = RefreshChallengeState(challengeID)
 			if err == nil {
@@ -231,16 +231,16 @@ func RmChallenge(userID, challengeID string) error {
 	filter := bson.M{"ID": challengeID, "UserID": userID}
 	selector := bson.M{"State": 1, "UserID": 1}
 	challenge, err := QueryChallenge(filter, selector)
+	log.Debugf("Remove challenge: [%v]", challengeID)
+
 	// important!
 	if err != nil {
 		log.Errorf("RmChallenge Error: [%v]", err)
-		return fmt.Errorf("Challenge not belong to user")
+		return fmt.Errorf("RmChallenge Error: [%v]", err)
 	}
-	if challenge.State != "running" {
-		return fmt.Errorf("Challenge isn't running.")
-	}
-
-	log.Debugf("Remove challenge: [%v]", challengeID)
+	// if challenge.State != "running" {
+	// 	return fmt.Errorf("Challenge isn't running.")
+	// }
 
 	// important!
 	if challenge.UserID != userID {

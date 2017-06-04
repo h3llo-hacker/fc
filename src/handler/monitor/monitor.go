@@ -14,7 +14,8 @@ func ScanTimoutChallenges() ([]types.Challenge, error) {
 	m := config.Conf.ChallengeDuration * time.Hour
 	ago := time.Now().Add(-m)
 	early := bson.M{"$lte": ago}
-	filter := bson.M{"State": "running", "Time.CreateTime": early}
+	state := []bson.M{bson.M{"State": "running"}, bson.M{"State": "created"}}
+	filter := bson.M{"$or": state, "Time.CreateTime": early}
 	selector := bson.M{"UserID": 1, "ID": 1}
 	challenges, err := challenge.QueryChallenges(filter, selector)
 	if err != nil {

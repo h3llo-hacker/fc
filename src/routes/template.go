@@ -5,9 +5,10 @@ import (
 	"strconv"
 	"strings"
 
+	T "handler/template"
+
 	"github.com/gin-gonic/gin"
 	"gopkg.in/mgo.v2/bson"
-	T "handler/template"
 )
 
 func templates(c *gin.Context) {

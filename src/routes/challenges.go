@@ -156,7 +156,7 @@ func challengeCreate(c *gin.Context) {
 
 func challengeRemove(c *gin.Context) {
 	uid := c.PostForm("uid")
-	challengeID := c.PostForm("cid")
+	challengeID := c.Param("challengeID")
 
 	if !validateUser(uid) {
 		c.JSON(400, gin.H{

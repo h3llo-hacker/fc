@@ -31,26 +31,34 @@ func Router(router *gin.Engine) {
 	// uG = user group
 	uG := router.Group("/user")
 	{
+		uG.POST("", userCreate)
+		userSelfGroup := uG.Group("/self")
+		{
+			userSelfGroup.GET("/:userURL", userInfo)
+			userSelfGroup.GET("/:userURL/info", userInfo)
+			userSelfGroup.GET("/:userURL/challenges", userChallenges)
+			// challenges[?type=0/1/2]
+			userSelfGroup.GET("/:userURL/followers", userFollowers)
+			userSelfGroup.GET("/:userURL/followees", userFollowees)
+			// don't remove user //
+			// uG.DELETE("/:userURL/remove", userDelete)
+			userSelfGroup.DELETE("/:userURL", userDeactive)
+		}
+		userActivationGroup := uG.Group("/activation")
+		{
+			userActivationGroup.POST("/:userURL", userActive)
+			userActivationGroup.DELETE("/:userURL", userDeactive)
+		}
+		// TODO 这些API怎么抽啊QAQ，全是动作，规范又不能带有动词，哇
 		uG.POST("/login", userLogin)
-		uG.POST("/create", userCreate)
-		uG.POST("/resetpasswd", userResetpasswd)
-		uG.POST("/forgetpasswd", userForgetpasswd)
-		uG.POST("/sendverifyemail", userSendVerifyEmail)
-		uG.POST("/verifyemail", userVerifyEmail)
-		uG.POST("/addinvitecodes", userAddInviteCodes)
-		uG.GET("/:userURL", userInfo)
-		// don't remove user //
-		// uG.DELETE("/:userURL/remove", userDelete)
-		uG.DELETE("/:userURL/remove", userDeactive)
-		uG.GET("/:userURL/info", userInfo)
+		uG.POST("/passwd", userResetpasswd)
+		uG.POST("/passwd/forgotten", userForgetpasswd)
+		uG.POST("/email", userSendVerifyEmail)
+		uG.POST("/email/verification", userVerifyEmail)
+		uG.POST("/invitecodes", userAddInviteCodes)
 		uG.POST("/follow/:userID", userFollow)
 		uG.POST("/update/:userURL", userUpdate)
-		uG.POST("/active/:userURL", userActive)
-		uG.POST("/deactive/:userURL", userDeactive)
-		uG.GET("/:userURL/challenges", userChallenges)
-		// challenges[?type=0/1/2]
-		uG.GET("/:userURL/followers", userFollowers)
-		uG.GET("/:userURL/followees", userFollowees)
+
 	}
 
 	// Challenges
@@ -59,9 +67,9 @@ func Router(router *gin.Engine) {
 	cG := router.Group("/challenge")
 	{
 		cG.GET("/:challengeID", challengeInfo)
-		cG.POST("/validate/:challengeID", challengeValidateFlag)
-		cG.POST("/create", challengeCreate)
-		cG.POST("/remove", challengeRemove)
+		cG.POST("/:challengeID/validation", challengeValidateFlag)
+		cG.POST("", challengeCreate)                // create
+		cG.DELETE("/:challengeID", challengeRemove) // delete
 	}
 
 	// templates
@@ -69,12 +77,13 @@ func Router(router *gin.Engine) {
 	// tG = template group
 	tG := router.Group("/template")
 	{
-		tG.POST("/create", templateCreate)
+		tG.PUT("", templateCreate)
 		tG.GET("/:templateID", templateQuery)
-		tG.POST("/enable/:templateID", templateEnable)
-		tG.POST("/disable/:templateID", templateDisable)
-		tG.POST("/update/:templateID", templateUpdate)
-		tG.DELETE("/:templateID/remove", templateRemove)
+		// TODO 把这俩开关改掉
+		tG.POST("/:templateID/enable", templateEnable)
+		tG.DELETE("/:templateID/enable", templateDisable)
+		tG.POST("/:templateID", templateUpdate)
+		tG.DELETE("/:templateID", templateRemove)
 	}
 
 	// list all services

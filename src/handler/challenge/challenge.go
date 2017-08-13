@@ -238,7 +238,7 @@ func RmChallenge(userID, challengeID string) error {
 		log.Errorf("RmChallenge Error: [%v]", err)
 		return fmt.Errorf("RmChallenge Error: [%v]", err)
 	}
-	if challenge.State != "terminated" {
+	if challenge.State == "terminated" {
 		return fmt.Errorf("Challenge has already been terminated.")
 	}
 

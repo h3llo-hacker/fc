@@ -1,8 +1,9 @@
 package etcd
 
 import (
-	"config"
 	"time"
+
+	"github.com/h3llo-hacker/fc/config"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/coreos/etcd/client"

@@ -1,16 +1,16 @@
-package utils
+package db
 
 import (
-	"config"
 	"errors"
 	"fmt"
 	"time"
-	// "strings"
+
+	"github.com/h3llo-hacker/fc/config"
+	"github.com/h3llo-hacker/fc/types"
 
 	log "github.com/Sirupsen/logrus"
 	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
-	"types"
 )
 
 var mongoConn *mgo.Session

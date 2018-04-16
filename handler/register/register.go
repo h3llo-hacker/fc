@@ -1,11 +1,12 @@
 package register
 
 import (
-	"config"
 	"fmt"
 	"strconv"
-	"types"
-	"utils/etcd"
+
+	"github.com/h3llo-hacker/fc/config"
+	"github.com/h3llo-hacker/fc/types"
+	"github.com/h3llo-hacker/fc/utils/etcd"
 
 	log "github.com/Sirupsen/logrus"
 )

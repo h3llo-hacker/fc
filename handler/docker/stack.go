@@ -2,9 +2,10 @@ package docker
 
 import (
 	"bytes"
-	"config"
 	"fmt"
 	"os/exec"
+
+	"github.com/h3llo-hacker/fc/config"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/docker/docker/api/types"

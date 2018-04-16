@@ -1,10 +1,10 @@
 package routes
 
 import (
-	"handler/challenge"
-	"handler/template"
-	"handler/user"
-	db "utils/db"
+	"github.com/h3llo-hacker/fc/handler/challenge"
+	"github.com/h3llo-hacker/fc/handler/template"
+	"github.com/h3llo-hacker/fc/handler/user"
+	"github.com/h3llo-hacker/fc/utils/db"
 
 	"github.com/gin-gonic/gin"
 	"gopkg.in/mgo.v2/bson"

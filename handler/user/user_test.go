@@ -3,10 +3,11 @@ package user
 import (
 	"testing"
 	"time"
-	"utils"
 
+	"github.com/h3llo-hacker/fc/utils"
+
+	"github.com/h3llo-hacker/fc/types"
 	"gopkg.in/mgo.v2/bson"
-	"types"
 )
 
 func TestAddUser(t *testing.T) {

@@ -1,16 +1,17 @@
 package template
 
 import (
-	"config"
 	"fmt"
 	"os"
 	"strings"
-	"types"
+
+	"github.com/h3llo-hacker/fc/config"
+	"github.com/h3llo-hacker/fc/types"
+	"github.com/h3llo-hacker/fc/utils/db"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/nu7hatch/gouuid"
 	"gopkg.in/mgo.v2/bson"
-	db "utils/db"
 )
 
 const C = "templates"

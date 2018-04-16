@@ -1,10 +1,11 @@
 package monitor
 
 import (
-	"config"
-	"handler/challenge"
 	"time"
-	"types"
+
+	"github.com/h3llo-hacker/fc/config"
+	"github.com/h3llo-hacker/fc/handler/challenge"
+	"github.com/h3llo-hacker/fc/types"
 
 	log "github.com/Sirupsen/logrus"
 	"gopkg.in/mgo.v2/bson"

@@ -7,11 +7,11 @@ import (
 
 	"github.com/h3llo-hacker/fc/config"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/swarm"
 	"github.com/docker/docker/cli/compose/convert"
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 )
 

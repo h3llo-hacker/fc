@@ -15,9 +15,9 @@ import (
 	"github.com/h3llo-hacker/fc/utils/db"
 	"github.com/h3llo-hacker/fc/utils/email"
 
-	log "github.com/Sirupsen/logrus"
 	pinyin "github.com/jmz331/gpinyin"
 	"github.com/nu7hatch/gouuid"
+	log "github.com/sirupsen/logrus"
 	"gopkg.in/mgo.v2/bson"
 )
 

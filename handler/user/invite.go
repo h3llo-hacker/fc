@@ -11,8 +11,8 @@ import (
 
 	// valid "github.com/asaskevich/govalidator"
 	// pinyin "github.com/jmz331/gpinyin"
-	log "github.com/Sirupsen/logrus"
 	"github.com/nu7hatch/gouuid"
+	log "github.com/sirupsen/logrus"
 	"gopkg.in/mgo.v2/bson"
 )
 

@@ -9,8 +9,8 @@ import (
 	"github.com/h3llo-hacker/fc/types"
 	"github.com/h3llo-hacker/fc/utils/db"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/nu7hatch/gouuid"
+	log "github.com/sirupsen/logrus"
 	"gopkg.in/mgo.v2/bson"
 )
 

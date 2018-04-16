@@ -8,7 +8,7 @@ import (
 	"github.com/h3llo-hacker/fc/config"
 	"github.com/h3llo-hacker/fc/types"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )

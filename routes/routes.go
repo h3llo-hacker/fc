@@ -4,8 +4,8 @@ import (
 	"github.com/h3llo-hacker/fc/config"
 	"github.com/h3llo-hacker/fc/handler/docker"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/gin-gonic/gin"
+	log "github.com/sirupsen/logrus"
 )
 
 func Router(router *gin.Engine) {

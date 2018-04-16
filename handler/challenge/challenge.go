@@ -1,22 +1,23 @@
 package challenge
 
 import (
-	"config"
 	"fmt"
-	"handler/docker"
-	"handler/register"
-	"handler/template"
-	U "handler/user"
 	"strings"
 	"sync"
 	"time"
-	"types"
-	"utils"
-	db "utils/db"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/docker/docker/api/types/swarm"
 	"gopkg.in/mgo.v2/bson"
+
+	"github.com/h3llo-hacker/fc/config"
+	"github.com/h3llo-hacker/fc/handler/docker"
+	"github.com/h3llo-hacker/fc/handler/register"
+	"github.com/h3llo-hacker/fc/handler/template"
+	U "github.com/h3llo-hacker/fc/handler/user"
+	"github.com/h3llo-hacker/fc/types"
+	"github.com/h3llo-hacker/fc/utils"
+	"github.com/h3llo-hacker/fc/utils/db"
 )
 
 var (

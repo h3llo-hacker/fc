@@ -1,7 +1,6 @@
 package user
 
 import (
-	"config"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -9,10 +8,12 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"types"
-	"utils"
-	db "utils/db"
-	"utils/email"
+
+	"github.com/h3llo-hacker/fc/config"
+	"github.com/h3llo-hacker/fc/types"
+	"github.com/h3llo-hacker/fc/utils"
+	"github.com/h3llo-hacker/fc/utils/db"
+	"github.com/h3llo-hacker/fc/utils/email"
 
 	log "github.com/Sirupsen/logrus"
 	pinyin "github.com/jmz331/gpinyin"

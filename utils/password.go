@@ -1,8 +1,10 @@
 package utils
 
 import (
-	"config"
 	"encoding/hex"
+
+	"github.com/h3llo-hacker/fc/config"
+
 	"golang.org/x/crypto/scrypt"
 )
 

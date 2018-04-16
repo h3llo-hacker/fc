@@ -1,8 +1,9 @@
 package etcd
 
 import (
-	"config"
 	"testing"
+
+	"github.com/h3llo-hacker/fc/config"
 )
 
 func Test_etcd(t *testing.T) {

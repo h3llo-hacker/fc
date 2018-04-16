@@ -1,9 +1,10 @@
 package email
 
 import (
-	"config"
 	"testing"
-	"types"
+
+	"github.com/h3llo-hacker/fc/config"
+	"github.com/h3llo-hacker/fc/types"
 )
 
 func Test_SendVerifyEmail(t *testing.T) {

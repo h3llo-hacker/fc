@@ -1,18 +1,19 @@
 package user
 
 import (
-	"config"
 	"errors"
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/h3llo-hacker/fc/config"
+	db "github.com/h3llo-hacker/fc/utils/db"
 
 	// valid "github.com/asaskevich/govalidator"
 	// pinyin "github.com/jmz331/gpinyin"
 	log "github.com/Sirupsen/logrus"
 	"github.com/nu7hatch/gouuid"
 	"gopkg.in/mgo.v2/bson"
-	db "utils/db"
 )
 
 func (user *User) GenerateInvitecodes() error {

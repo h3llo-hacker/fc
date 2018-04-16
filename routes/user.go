@@ -2,12 +2,13 @@ package routes
 
 import (
 	"fmt"
-	"handler/challenge"
-	U "handler/user"
 	"strconv"
 	"time"
-	"types"
-	"utils"
+
+	"github.com/h3llo-hacker/fc/handler/challenge"
+	U "github.com/h3llo-hacker/fc/handler/user"
+	"github.com/h3llo-hacker/fc/types"
+	"github.com/h3llo-hacker/fc/utils"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/gin-gonic/gin"

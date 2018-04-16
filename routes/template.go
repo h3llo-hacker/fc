@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	T "handler/template"
+	T "github.com/h3llo-hacker/fc/handler/template"
 
 	"github.com/gin-gonic/gin"
 	"gopkg.in/mgo.v2/bson"

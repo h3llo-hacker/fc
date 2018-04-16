@@ -2,12 +2,13 @@ package rank
 
 import (
 	"fmt"
-	handlerChallenge "handler/challenge"
-	handlerTemplate "handler/template"
-	handlerUser "handler/user"
 	"strconv"
 	"time"
-	"types"
+
+	handlerChallenge "github.com/h3llo-hacker/fc/handler/challenge"
+	handlerTemplate "github.com/h3llo-hacker/fc/handler/template"
+	handlerUser "github.com/h3llo-hacker/fc/handler/user"
+	"github.com/h3llo-hacker/fc/types"
 
 	log "github.com/Sirupsen/logrus"
 	"gopkg.in/mgo.v2/bson"

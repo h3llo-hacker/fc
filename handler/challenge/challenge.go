@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/docker/docker/api/types/swarm"
+	log "github.com/sirupsen/logrus"
 	"gopkg.in/mgo.v2/bson"
 
 	"github.com/h3llo-hacker/fc/config"

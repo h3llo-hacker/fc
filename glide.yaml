@@ -14,7 +14,7 @@ import:
 - package: github.com/Microsoft/hcsshim
 - package: github.com/Pallinder/go-randomdata
 - package: github.com/RackSec/srslog
-- package: github.com/Sirupsen/logrus
+- package: github.com/sirupsen/logrus
 - package: github.com/asaskevich/govalidator
 - package: github.com/aws/aws-sdk-go
   subpackages:

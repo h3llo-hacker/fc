@@ -5,8 +5,8 @@ import (
 
 	"github.com/h3llo-hacker/fc/config"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/coreos/etcd/client"
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 )
 

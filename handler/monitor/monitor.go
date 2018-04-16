@@ -7,7 +7,7 @@ import (
 	"github.com/h3llo-hacker/fc/handler/challenge"
 	"github.com/h3llo-hacker/fc/types"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"gopkg.in/mgo.v2/bson"
 )
 

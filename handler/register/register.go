@@ -8,7 +8,7 @@ import (
 	"github.com/h3llo-hacker/fc/types"
 	"github.com/h3llo-hacker/fc/utils/etcd"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 func RegisterNewChallenge(challengeID, UrlPrefix string,
